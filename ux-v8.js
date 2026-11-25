@@ -1,7 +1,7 @@
 
 (function(){
   function getBatchesV8(){
-    try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
+    return MotoTudoData.read('mt_orders',[])
   }
   function saveBatchesV8(v){
     MotoTudoData.write('mt_orders',v);
