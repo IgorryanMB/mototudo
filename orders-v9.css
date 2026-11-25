@@ -1,0 +1,56 @@
+
+/* Pedidos detalhados e reabertura v9 */
+.order-list-v9{display:grid;gap:10px}
+.order-card-v9{border:1px solid #252a32;background:#0e1014;border-radius:14px;overflow:hidden}
+.order-card-v9-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px}
+.order-card-v9-info{min-width:0}
+.order-card-v9-info small,.order-card-v9-info em{display:block}
+.order-card-v9-info small{margin-top:4px;color:#747c88;font-size:8px}
+.order-card-v9-info em{margin-top:5px;color:#9a8440;font-size:8px;font-style:normal}
+.order-card-v9-total{text-align:right}
+.order-card-v9-total span,.order-card-v9-total strong{display:block}
+.order-card-v9-total span{font-size:8px;color:#717986}
+.order-card-v9-total strong{font-size:14px;margin-top:3px}
+.order-card-v9-actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid #20242b;background:#0b0d10}
+.order-card-v9-actions button{height:36px;border-radius:9px;border:1px solid #2b3038;background:#15181d;color:#cbd0d8;padding:0 12px;font-size:9px;font-weight:800}
+.order-card-v9-actions button.primary{background:rgba(246,200,0,.1);border-color:#534714;color:var(--gold)}
+.order-card-v9-actions button:hover{filter:brightness(1.08)}
+
+.order-detail-v9{display:grid;gap:16px}
+.order-detail-meta-v9{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.order-detail-meta-v9>div{padding:12px;background:#0d0f13;border:1px solid #252a32;border-radius:11px}
+.order-detail-meta-v9 span,.order-detail-meta-v9 strong{display:block}
+.order-detail-meta-v9 span{font-size:8px;color:#747d89;text-transform:uppercase;letter-spacing:.07em}
+.order-detail-meta-v9 strong{font-size:10px;margin-top:5px}
+.order-detail-total-v9{color:var(--gold)}
+.order-detail-items-v9{display:grid;gap:8px}
+.order-detail-items-v9 article{display:grid;grid-template-columns:auto minmax(0,1fr) 70px 100px 110px;gap:10px;align-items:center;padding:11px;border:1px solid #242932;border-radius:11px;background:#0e1014}
+.order-detail-number-v9{width:28px;height:28px;border-radius:8px;background:rgba(246,200,0,.1);color:var(--gold);display:grid;place-items:center;font-size:9px;font-weight:800}
+.order-detail-product-v9 strong,.order-detail-product-v9 small{display:block}
+.order-detail-product-v9 strong{font-size:10px}
+.order-detail-product-v9 small{font-size:8px;color:#757d89;margin-top:3px}
+.order-detail-items-v9 article>div:not(.order-detail-product-v9) span,
+.order-detail-items-v9 article>div:not(.order-detail-product-v9) b{display:block}
+.order-detail-items-v9 article>div:not(.order-detail-product-v9) span{font-size:7px;color:#6f7784;text-transform:uppercase}
+.order-detail-items-v9 article>div:not(.order-detail-product-v9) b{font-size:9px;margin-top:3px}
+.existing-order-banner-v9{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #3b3518;border-radius:12px;background:rgba(246,200,0,.05)}
+.existing-order-banner-v9 strong,.existing-order-banner-v9 small{display:block}
+.existing-order-banner-v9 strong{font-size:11px}
+.existing-order-banner-v9 small{font-size:8px;color:#858d99;margin-top:4px}
+
+@media(max-width:860px){
+  .order-detail-meta-v9{grid-template-columns:1fr 1fr}
+  .order-detail-items-v9 article{grid-template-columns:auto minmax(0,1fr) auto auto}
+  .order-detail-items-v9 article>div:last-child{grid-column:2/-1}
+}
+@media(max-width:560px){
+  .order-card-v9-main{grid-template-columns:auto minmax(0,1fr)}
+  .order-card-v9-total{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;text-align:left;border-top:1px solid #20242b;padding-top:9px}
+  .order-card-v9-total span,.order-card-v9-total strong{display:inline}
+  .order-card-v9-actions{display:grid;grid-template-columns:1fr 1fr}
+  .order-card-v9-actions button{width:100%}
+  .order-detail-meta-v9{grid-template-columns:1fr}
+  .order-detail-items-v9 article{grid-template-columns:auto minmax(0,1fr)}
+  .order-detail-items-v9 article>div:not(.order-detail-product-v9){grid-column:2/-1;display:flex;justify-content:space-between}
+  .order-detail-items-v9 article>div:last-child{grid-column:2/-1}
+}
