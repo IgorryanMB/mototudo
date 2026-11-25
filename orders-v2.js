@@ -95,7 +95,7 @@ function openMovementModal(type,productId=null){
       </div>
     </form>`,
     `<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="saveMovement">${isOut?'Finalizar pedido e dar baixa':'Registrar reposição'}</button>`,
-    true
+    false
   );
 
   const wrap=document.getElementById('movementItems');
