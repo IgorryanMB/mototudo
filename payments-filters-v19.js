@@ -33,6 +33,7 @@
             <button class="active" data-status-v19="all">Todos</button>
             <button data-status-v19="open"><i class="bi bi-clock-history"></i> Em aberto</button>
             <button data-status-v19="completed"><i class="bi bi-check2-circle"></i> Finalizados</button>
+            <button data-status-v19="fiado"><i class="bi bi-journal-text"></i> Fiados</button>
           </div>
           <div class="movement-date-v19">
             <i class="bi bi-calendar3"></i>
@@ -73,7 +74,7 @@
       document.querySelectorAll('#orderListV11 .order-card-v9').forEach(card=>{
         const text=filterMode==='plate'?normV19(card.dataset.orderPlate||''):normV19(card.dataset.orderName||'');
         const okText=!q||text.includes(q);
-        const okStatus=status==='all'||card.dataset.statusV19===status;
+        const okStatus=status==='all'||(status==='fiado'?card.dataset.paymentV19==='fiado':card.dataset.statusV19===status);
         const okDate=!d||card.dataset.dateV19===d;
         card.style.display=okText&&okStatus&&okDate?'':'none';
       });
@@ -134,18 +135,34 @@
               <option value="fiado">Fiado</option>
               <option value="outro">Outro</option>
             </select>
+          </div>
+          <div class="form-field full credit-name-wrap-v22" id="editCreditWrapV22" style="display:none">
+            <label>Nome de quem comprou fiado</label>
+            <input class="form-control-dark" id="editCreditNameV22" value="${esc(o.creditName||'')}" placeholder="Ex.: João da Silva">
           </div>`);
-        document.getElementById('editPaymentV19').value=o.payment||'pix';
+        const editPayment=document.getElementById('editPaymentV19');
+        const editCreditWrap=document.getElementById('editCreditWrapV22');
+        editPayment.value=o.payment||'pix';
+        const syncEditCredit=()=>{if(editCreditWrap)editCreditWrap.style.display=editPayment.value==='fiado'?'':'none';};
+        editPayment.onchange=syncEditCredit;syncEditCredit();
 
         const save=document.getElementById('saveEditV10');
         if(save){
-          save.addEventListener('click',()=>{
+          save.addEventListener('click',e=>{
             const value=document.getElementById('editPaymentV19')?.value||'pix';
+            const creditName=(document.getElementById('editCreditNameV22')?.value||'').trim();
+            if(value==='fiado'&&!creditName){
+              e.stopImmediatePropagation();e.preventDefault();
+              toast('Informe o nome','Digite o nome de quem comprou fiado.','danger');
+              return;
+            }
             setTimeout(()=>{
               const latest=ordersV19();
               const current=latest.find(x=>Number(x.id)===id);
               if(current){
                 current.payment=value;
+                current.creditName=value==='fiado'?creditName:'';
+                current.creditStatus=value==='fiado'?(current.creditStatus||'open'):'';
                 saveOrdersV19(latest);
               }
             },0);
