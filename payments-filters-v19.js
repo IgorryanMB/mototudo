@@ -140,12 +140,15 @@
         const save=document.getElementById('saveEditV10');
         if(save){
           save.addEventListener('click',()=>{
-            const latest=ordersV19();
-            const current=latest.find(x=>Number(x.id)===id);
-            if(current){
-              current.payment=document.getElementById('editPaymentV19')?.value||'pix';
-              saveOrdersV19(latest);
-            }
+            const value=document.getElementById('editPaymentV19')?.value||'pix';
+            setTimeout(()=>{
+              const latest=ordersV19();
+              const current=latest.find(x=>Number(x.id)===id);
+              if(current){
+                current.payment=value;
+                saveOrdersV19(latest);
+              }
+            },0);
           },true);
         }
       }
