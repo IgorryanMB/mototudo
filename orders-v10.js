@@ -19,9 +19,9 @@
     appView.innerHTML=`
       <section class="page-stack">
         <div class="kpi-row">
-          <div class="metric-card"><span>Pedidos vendidos</span><strong>${batches.filter(o=>o.type==='out').length}</strong><small>${batches.filter(o=>o.type==='out').reduce((s,o)=>s+unitsV10(o),0)} unidades vendidas</small></div>
+          <div class="metric-card"><span>Pedidos vendidos</span><strong>${batches.filter(o=>o.type==='out'&&o.status!=='pending').length}</strong><small>${batches.filter(o=>o.type==='out'&&o.status!=='pending').reduce((s,o)=>s+unitsV10(o),0)} unidades vendidas</small></div>
           <div class="metric-card"><span>Entradas / reposições</span><strong>${batches.filter(o=>o.type==='in').length}</strong><small>${batches.filter(o=>o.type==='in').reduce((s,o)=>s+unitsV10(o),0)} unidades recebidas</small></div>
-          <div class="metric-card"><span>Ajustes</span><strong>${movements.filter(m=>m.type==='adjust').length}</strong><small>Conferências de inventário</small></div>
+          <div class="metric-card"><span>Pedidos pendentes</span><strong>${batches.filter(o=>o.type==='out'&&o.status==='pending').length}</strong><small>Motos aguardando serviço / baixa</small></div>
           <div class="metric-card"><span>Faturamento simulado</span><strong>${money(salesRevenue())}</strong><small>Somatório das saídas registradas</small></div>
         </div>
 
@@ -46,7 +46,7 @@
                 <div class="order-card-v9-main">
                   <span class="order-icon ${o.type==='out'?'out':'in'}"><i class="bi ${o.type==='out'?'bi-receipt-cutoff':'bi-box-arrow-in-down'}"></i></span>
                   <div class="order-card-v9-info">
-                    <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong><span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span></div>
+                    <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong>${o.status==='pending'?'<span class="badge-pending-v15"><i class="bi bi-clock-history"></i> Pendente</span>':`<span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span>`}</div>
                     <small><span class="code">${esc(o.code||'Sem código')}</span>${o.bike?' • '+esc(o.bike):''} • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
                     ${o.updatedAt?`<em>Última alteração: ${fmtDate(o.updatedAt)}</em>`:''}
                   </div>
@@ -54,7 +54,7 @@
                 </div>
                 <div class="order-card-v9-actions">
                   <button data-view-v10="${o.id}"><i class="bi bi-eye"></i> Ver</button>
-                  <button class="primary" data-edit-v10="${o.id}"><i class="bi bi-pencil-square"></i> Editar pedido</button>
+                  <button class="primary" data-edit-v10="${o.id}"><i class="bi bi-pencil-square"></i> Editar pedido</button>${o.status==='pending'?`<button class="finish-pending-v15" data-finish-v15="${o.id}"><i class="bi bi-check2-circle"></i> Dar baixa / Finalizar</button>`:''}
                 </div>
               </article>
             `).join(''):'<div class="empty-state"><i class="bi bi-receipt"></i><strong>Nenhum pedido ou entrada registrado</strong></div>'}
@@ -79,6 +79,7 @@
     document.getElementById('mvInv').onclick=()=>openInventoryModal();
     document.querySelectorAll('[data-view-v10]').forEach(b=>b.onclick=()=>openViewV10(Number(b.dataset.viewV10)));
     document.querySelectorAll('[data-edit-v10]').forEach(b=>b.onclick=()=>openEditV10(Number(b.dataset.editV10)));
+    document.querySelectorAll('[data-finish-v15]').forEach(b=>b.onclick=()=>finalizePendingV15(Number(b.dataset.finishV15)));
     const orderSearch=document.getElementById('orderSearchV11');
     if(orderSearch){
       orderSearch.oninput=()=>{
@@ -123,6 +124,7 @@
     const o=all.find(x=>Number(x.id)===Number(id));
     if(!o)return;
     const isOut=o.type==='out';
+    const isPending=isOut&&o.status==='pending';
 
     // snapshot original for stock delta calculation
     const original=(o.items||[]).map(i=>({...i,qty:Number(i.qty),unit:Number(i.unit)}));
@@ -133,7 +135,7 @@
       `<div class="movement-v8">
         <div class="existing-order-banner-v9">
           <span class="order-icon ${isOut?'out':'in'}"><i class="bi ${isOut?'bi-receipt-cutoff':'bi-box-arrow-in-down'}"></i></span>
-          <div><strong>${esc(o.code)}</strong><small>Você pode alterar quantidades, remover itens ou adicionar novos.</small></div>
+          <div><strong>${esc(o.code)}</strong><small>${isPending?'Pedido pendente: edite à vontade; o estoque só será baixado ao finalizar.':'Você pode alterar quantidades, remover itens ou adicionar novos.'}</small></div>
         </div>
 
         <div class="movement-meta">
@@ -241,11 +243,11 @@
         const newQty=newMap.get(pid)||0;
         const delta=newQty-oldQty;
 
-        if(isOut && delta>0 && delta>p.stock){
+        if(!isPending && isOut && delta>0 && delta>p.stock){
           toast('Estoque insuficiente',p.name+': faltam '+(delta-p.stock)+' un. para salvar essa alteração.','danger');
           return;
         }
-        if(!isOut && delta<0 && Math.abs(delta)>p.stock){
+        if(!isPending && !isOut && delta<0 && Math.abs(delta)>p.stock){
           toast('Não é possível reduzir a entrada',p.name+': parte desse estoque já pode ter sido utilizada.','danger');
           return;
         }
@@ -261,16 +263,18 @@
         const newQty=newMap.get(pid)||0;
         const delta=newQty-oldQty;
 
-        if(isOut){
-          p.stock-=delta; // increase sale => reduce stock, decrease sale => restore
-        }else{
-          p.stock+=delta; // increase entry => add stock, decrease entry => remove
+        if(!isPending){
+          if(isOut){
+            p.stock-=delta;
+          }else{
+            p.stock+=delta;
+          }
         }
 
         const dItem=draft.find(i=>Number(i.productId)===pid);
-        if(!isOut && dItem) p.location=String(dItem.location||'').trim();
+        if(!isPending && !isOut && dItem) p.location=String(dItem.location||'').trim();
 
-        if(delta!==0){
+        if(!isPending && delta!==0){
           movements.unshift({
             id:Date.now()+pid,
             orderId:o.id,orderCode:o.code,type:o.type,
@@ -302,5 +306,47 @@
     };
   }
 
+  function finalizePendingV15(id){
+    const all=getOrdersV10();
+    const o=all.find(x=>Number(x.id)===Number(id));
+    if(!o||o.status!=='pending')return;
+
+    const shortage=(o.items||[]).find(i=>{
+      const p=products.find(x=>Number(x.id)===Number(i.productId));
+      return !p||Number(i.qty)>Number(p.stock||0);
+    });
+    if(shortage){
+      const p=products.find(x=>Number(x.id)===Number(shortage.productId));
+      toast('Estoque insuficiente',(p?.name||shortage.product)+': disponível '+(p?.stock||0)+' un.','danger');
+      return;
+    }
+
+    openModal(
+      'Finalizar pedido • '+o.code,
+      '<div class="pending-confirm-v15"><span><i class="bi bi-check2-circle"></i></span><div><strong>Dar baixa neste pedido?</strong><p>Os produtos serão descontados do estoque e o pedido passará a contar como venda no Financeiro.</p><b>'+esc(o.name||o.code)+' • '+money(totalV10(o))+'</b></div></div>',
+      '<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="confirmFinishV15">Dar baixa e finalizar</button>',
+      true
+    );
+    document.querySelector('[data-close-action]').onclick=closeModal;
+    document.getElementById('confirmFinishV15').onclick=()=>{
+      const now=new Date().toISOString();
+      (o.items||[]).forEach((i,k)=>{
+        const p=products.find(x=>Number(x.id)===Number(i.productId));
+        if(!p)return;
+        p.stock-=Number(i.qty);
+        movements.unshift({
+          id:Date.now()+k,orderId:o.id,orderCode:o.code,type:'out',
+          productId:p.id,product:p.name,qty:Number(i.qty),unit:Number(i.unit),
+          location:p.location||'',date:now,note:'Finalização de pedido pendente '+o.code
+        });
+      });
+      o.status='completed';
+      o.completedAt=now;
+      o.updatedAt=now;
+      setOrdersV10(all);
+      persist();closeModal();render();
+      toast('Pedido finalizado',o.code+' teve a baixa realizada.','success');
+    };
+  }
   try{if(state&&state.view==='movements')renderMovements();}catch(e){console.error('Moto Tudo v10',e);}
 })();
