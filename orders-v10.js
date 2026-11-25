@@ -52,7 +52,7 @@
                 <div class="order-card-v9-main">
                   <span class="order-icon ${o.type==='out'?'out':'in'}"><i class="bi ${o.type==='out'?'bi-receipt-cutoff':'bi-box-arrow-in-down'}"></i></span>
                   <div class="order-card-v9-info">
-                    <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong>${o.status==='pending'?'<span class="badge-pending-v15"><i class="bi bi-clock-history"></i> Pendente</span>':`<span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span>`}</div>
+                    <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong>${o.status==='pending'?'<span class="badge-pending-v15"><i class="bi bi-clock-history"></i> Pendente</span>':`<span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda':'Entrada / Reposição'}</span>`}</div>
                     <small><span class="code">${esc(o.code||'Sem código')}</span>${o.bike?' • '+esc(o.bike):''}${o.plate?' • Placa '+esc(o.plate):''} • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
                     ${o.updatedAt?`<em>Última alteração: ${fmtDate(o.updatedAt)}</em>`:''}
                   </div>
@@ -73,7 +73,7 @@
             <thead><tr><th>Data</th><th>Pedido / lote</th><th>Tipo</th><th>Produto</th><th>Qtd.</th><th>Localização</th><th>Valor unit.</th></tr></thead>
             <tbody>${rows.map(m=>`<tr>
               <td>${fmtDate(m.date)}</td><td><span class="code">${esc(m.orderCode||'—')}</span></td>
-              <td><span class="badge-soft ${m.type==='in'?'green':m.type==='out'?'red':'gold'}">${m.type==='in'?'Entrada':m.type==='out'?'Saída':'Ajuste'}</span></td>
+              <td><span class="badge-soft ${m.type==='in'?'green':m.type==='out'?'red':'gold'}">${m.type==='in'?'Entrada':m.type==='out'?'Venda':'Ajuste'}</span></td>
               <td>${esc(m.product)}</td><td>${m.qty}</td><td>${esc(m.location||'—')}</td><td>${money(m.unit||0)}</td>
             </tr>`).join('')}</tbody>
           </table></div>
