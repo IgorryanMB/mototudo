@@ -1,0 +1,29 @@
+
+/* Detalhes completos da venda fiado v25 */
+.credit-sale-head-v25{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;
+}
+.credit-sale-head-v25>div{
+  padding:9px;border:1px solid #252a32;border-radius:9px;background:#0f1115;
+}
+.credit-sale-head-v25 span,.credit-sale-head-v25 strong{display:block}
+.credit-sale-head-v25 span{font-size:7px;color:#747d89;text-transform:uppercase}
+.credit-sale-head-v25 strong{font-size:9px;margin-top:4px}
+.credit-sale-items-v25{display:grid;gap:7px;margin-bottom:12px}
+.credit-sale-item-v25{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:center;
+  padding:9px 0;border-bottom:1px solid #20242a;
+}
+.credit-sale-item-v25:last-child{border-bottom:0}
+.credit-sale-number-v25{
+  width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+  background:#16191e;color:#aeb5c0;font-size:8px;font-weight:800;
+}
+.credit-sale-item-v25 strong,.credit-sale-item-v25 small{display:block}
+.credit-sale-item-v25 strong{font-size:9px}
+.credit-sale-item-v25 small{font-size:7px;color:#7d8590;margin-top:3px}
+.credit-sale-item-v25>b{font-size:9px}
+.credit-sale-item-v25.labor .credit-sale-number-v25{color:var(--gold);background:rgba(246,200,0,.08)}
+@media(max-width:560px){
+  .credit-sale-head-v25{grid-template-columns:1fr 1fr}
+}
