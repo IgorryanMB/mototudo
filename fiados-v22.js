@@ -117,6 +117,7 @@
               <div class="credit-avatar-v22"><i class="bi bi-person-fill"></i></div>
               <div class="grow"><strong>${esc(name)}</strong><small>${orders.length} pedido(s) • ${openCount} em aberto</small></div>
               <div class="credit-customer-total-v22"><span>Total</span><b>${money(total)}</b><small>Pago ${money(paidNow)} • Deve ${money(due)}</small></div>
+              ${due>0?`<button class="credit-client-pay-v23" data-credit-client-v23="${esc(name)}"><i class="bi bi-cash-stack"></i> Registrar pagamento</button>`:''}
             </div>
             <div class="credit-orders-v22">
               ${orders.map(o=>`
@@ -142,8 +143,27 @@
 
       root.querySelectorAll('[data-credit-pay-v23]').forEach(btn=>btn.onclick=()=>openPaymentV23(Number(btn.dataset.creditPayV23)));
       root.querySelectorAll('[data-credit-view-v23]').forEach(btn=>btn.onclick=()=>openCreditDetailV23(Number(btn.dataset.creditViewV23)));
+      root.querySelectorAll('[data-credit-client-v23]').forEach(btn=>btn.onclick=()=>openClientPaymentV23(btn.dataset.creditClientV23));
     }
 
+    function openClientPaymentV23(clientName){
+      const saleOrders=getOrdersV22().filter(o=>o.payment==='fiado'&&(o.creditName||'Sem nome')===clientName&&dueV23(o)>0);
+      if(!saleOrders.length){toast('Sem saldo em aberto',clientName+' não possui pedidos pendentes.','success');return;}
+      const options=saleOrders.map(o=>'<option value="'+o.id+'">'+esc(o.code)+' • '+esc(o.name||'Pedido')+' • Falta '+money(dueV23(o))+'</option>').join('');
+      openModal('Registrar pagamento • '+clientName,
+        '<div class="credit-select-sale-v23"><div class="form-field"><label>Selecione a venda que será abatida</label><select class="form-select-dark" id="creditOrderSelectV23">'+options+'</select></div><div class="credit-selected-sale-v23" id="creditSelectedSaleV23"></div></div>',
+        '<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="continueCreditPaymentV23">Continuar</button>',true);
+      document.querySelector('[data-close-action]').onclick=closeModal;
+      const select=document.getElementById('creditOrderSelectV23');
+      const info=document.getElementById('creditSelectedSaleV23');
+      function sync(){
+        const o=saleOrders.find(x=>Number(x.id)===Number(select.value));
+        if(!o)return;
+        info.innerHTML='<div><span>Total da venda</span><b>'+money(totalV22(o))+'</b></div><div><span>Já pago</span><b class="money-positive">'+money(paidV23(o))+'</b></div><div><span>Saldo desta venda</span><b>'+money(dueV23(o))+'</b></div>';
+      }
+      select.onchange=sync;sync();
+      document.getElementById('continueCreditPaymentV23').onclick=()=>{const id=Number(select.value);closeModal();openPaymentV23(id);};
+    }
     function openPaymentV23(id){
       const orders=getOrdersV22();
       const o=orders.find(x=>Number(x.id)===Number(id));
@@ -153,10 +173,17 @@
         '<div class="form-field"><label>Cliente</label><input class="form-control-dark" value="'+esc(o.creditName||'Sem nome')+'" disabled></div>'+
         '<div class="form-field"><label>Valor total do pedido</label><input class="form-control-dark" value="'+money(totalV22(o))+'" disabled></div>'+
         '<div class="form-field"><label>Já pagou</label><input class="form-control-dark" value="'+money(paidV23(o))+'" disabled></div>'+
+        '<div class="credit-pay-mode-v23"><button type="button" class="active" data-pay-mode-v23="full">Quitar saldo</button><button type="button" data-pay-mode-v23="partial">Pagamento parcial</button></div>'+ 
         '<div class="form-field"><label>Valor pago agora</label><input class="form-control-dark" id="partialPaymentV23" type="number" min="0.01" max="'+due.toFixed(2)+'" step="0.01" value="'+due.toFixed(2)+'"></div>'+
         '<div class="form-field"><label>Observação</label><input class="form-control-dark" id="partialPaymentNoteV23" placeholder="Ex.: Pix, dinheiro, parcela..."></div>',
         '<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="confirmPartialPaymentV23">Confirmar pagamento</button>',true);
       document.querySelector('[data-close-action]').onclick=closeModal;
+      const amountInput=document.getElementById('partialPaymentV23');
+      amountInput.readOnly=true;
+      document.querySelectorAll('[data-pay-mode-v23]').forEach(btn=>btn.onclick=()=>{
+        document.querySelectorAll('[data-pay-mode-v23]').forEach(x=>x.classList.toggle('active',x===btn));
+        if(btn.dataset.payModeV23==='full'){amountInput.value=due.toFixed(2);amountInput.readOnly=true;}else{amountInput.readOnly=false;amountInput.value='';amountInput.focus();}
+      });
       document.getElementById('confirmPartialPaymentV23').onclick=()=>{
         const amount=Number(document.getElementById('partialPaymentV23').value||0);
         const note=(document.getElementById('partialPaymentNoteV23').value||'').trim();
