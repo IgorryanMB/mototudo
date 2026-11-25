@@ -1,10 +1,10 @@
 
 (function(){
   function getBatches(){
-    try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
+    return MotoTudoData.read('mt_orders',[])
   }
   function saveBatches(v){
-    localStorage.setItem('mt_orders',JSON.stringify(v));
+    MotoTudoData.write('mt_orders',v);
     try{ if(typeof orders!=='undefined') orders=v; }catch(e){}
   }
   function batchCode(type){
@@ -202,8 +202,8 @@
       const batches=getBatches();
       batches.unshift(batch);
       saveBatches(batches);
-      localStorage.setItem('mt_products',JSON.stringify(products));
-      localStorage.setItem('mt_movements',JSON.stringify(movements));
+      MotoTudoData.write('mt_products',products);
+      MotoTudoData.write('mt_movements',movements);
       try{persist();}catch(e){}
       closeModal();
       render();
