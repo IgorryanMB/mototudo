@@ -40,3 +40,9 @@
   .order-items>div{grid-template-columns:1fr auto}
   .order-items small{grid-column:1/-1;text-align:left;min-width:0}
 }
+.stock-actions{display:flex;align-items:center;gap:6px}
+.stock-action{width:30px;height:30px;border-radius:8px;border:1px solid #2b3038;background:#15181d;display:grid;place-items:center;font-size:13px;font-weight:900;transition:.15s}
+.stock-action.plus{color:var(--green);background:rgba(43,210,138,.06)}
+.stock-action.minus{color:var(--red);background:rgba(255,96,108,.06)}
+.stock-action.plus:hover{border-color:rgba(43,210,138,.45);background:rgba(43,210,138,.12);transform:translateY(-1px)}
+.stock-action.minus:hover{border-color:rgba(255,96,108,.45);background:rgba(255,96,108,.12);transform:translateY(-1px)}
