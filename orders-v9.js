@@ -1,10 +1,10 @@
 
 (function(){
   function batchesV9(){
-    try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
+    return MotoTudoData.read('mt_orders',[])
   }
   function saveBatchesV9(v){
-    localStorage.setItem('mt_orders',JSON.stringify(v));
+    MotoTudoData.write('mt_orders',v);
     try{orders=v}catch(e){}
   }
   function orderTotalV9(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0)}
