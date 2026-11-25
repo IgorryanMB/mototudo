@@ -1,0 +1,54 @@
+
+/* Controle de fiados v22 */
+.credit-toolbar-v22{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}
+.credit-search-v22{margin:0;flex:1;min-width:260px}
+.credit-tabs-v22{display:flex;gap:7px;flex-wrap:wrap}
+.credit-tabs-v22 button{
+  height:38px;padding:0 12px;border-radius:9px;border:1px solid #2b3038;
+  background:#15181d;color:#aeb5c0;font-size:9px;font-weight:800
+}
+.credit-tabs-v22 button.active{background:rgba(246,200,0,.11);border-color:#655710;color:var(--gold)}
+.credit-list-v22{display:grid;gap:12px}
+.credit-customer-v22{border:1px solid #242932;border-radius:14px;background:#0d0f13;overflow:hidden}
+.credit-customer-head-v22{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-bottom:1px solid #20242b}
+.credit-avatar-v22{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:rgba(246,200,0,.09);color:var(--gold);font-size:17px}
+.credit-customer-head-v22 strong,.credit-customer-head-v22 small{display:block}
+.credit-customer-head-v22 strong{font-size:12px}
+.credit-customer-head-v22 small{font-size:8px;color:#747c88;margin-top:4px}
+.credit-customer-total-v22{text-align:right}
+.credit-customer-total-v22 span,.credit-customer-total-v22 b{display:block}
+.credit-customer-total-v22 span{font-size:7px;color:#6f7784;text-transform:uppercase}
+.credit-customer-total-v22 b{font-size:14px;color:var(--gold);margin-top:3px}
+.credit-orders-v22{display:grid}
+.credit-order-v22{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid #1d2127}
+.credit-order-v22:last-child{border-bottom:0}
+.credit-order-v22.paid{opacity:.72}
+.credit-order-main-v22 strong,.credit-order-main-v22 small{display:block}
+.credit-order-main-v22 strong{font-size:10px}
+.credit-order-main-v22 small{font-size:8px;color:#747c88;margin-top:4px}
+.credit-order-value-v22{text-align:right;min-width:95px}
+.credit-order-value-v22 span,.credit-order-value-v22 b{display:block}
+.credit-order-value-v22 span{font-size:7px;color:#7a838f;text-transform:uppercase}
+.credit-order-value-v22 b{font-size:11px;color:#f6c800;margin-top:3px}
+.credit-order-v22.paid .credit-order-value-v22 b{color:var(--green)}
+.credit-order-actions-v22 button{height:34px;border-radius:9px;padding:0 10px;border:1px solid rgba(43,210,138,.27);background:rgba(43,210,138,.08);color:var(--green);font-size:8px;font-weight:800}
+.credit-order-actions-v22 button.secondary{border-color:#343a44;background:#16191e;color:#aab1bc}
+.credit-open-money-v22{color:#f6c800!important}
+.credit-person-chip-v22{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border-radius:999px;background:rgba(246,200,0,.08);color:#d9bf49;border:1px solid rgba(246,200,0,.15);font-size:7px;font-weight:800}
+.credit-name-wrap-v22{border-left:2px solid #695817;padding-left:10px}
+@media(max-width:720px){
+  .credit-toolbar-v22{align-items:stretch}
+  .credit-search-v22{min-width:0;width:100%}
+  .credit-tabs-v22{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+  .credit-tabs-v22 button{width:100%}
+  .credit-order-v22{grid-template-columns:1fr auto}
+  .credit-order-actions-v22{grid-column:1/-1}
+  .credit-order-actions-v22 button{width:100%}
+  .movement-status-tabs-v19{grid-template-columns:repeat(2,1fr)!important}
+}
+@media(max-width:480px){
+  .credit-customer-head-v22{grid-template-columns:auto 1fr}
+  .credit-customer-total-v22{grid-column:1/-1;text-align:left}
+  .credit-order-v22{grid-template-columns:1fr}
+  .credit-order-value-v22{text-align:left}
+}
