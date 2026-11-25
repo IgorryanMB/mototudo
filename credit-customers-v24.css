@@ -1,0 +1,39 @@
+
+/* Cadastro de clientes autorizados para fiado v24 */
+.credit-registry-hint-v24{
+  display:block;margin-top:6px;color:#8a929d;font-size:7px;line-height:1.4
+}
+.credit-registry-hint-v24 i{color:var(--gold);margin-right:4px}
+.credit-registry-summary-v24{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:10px 12px;margin-bottom:12px;border:1px solid #2d2a18;border-radius:11px;
+  background:rgba(246,200,0,.045)
+}
+.credit-registry-summary-v24>i{
+  width:36px;height:36px;display:grid;place-items:center;border-radius:9px;
+  background:rgba(246,200,0,.09);color:var(--gold);font-size:15px
+}
+.credit-registry-summary-v24 strong,.credit-registry-summary-v24 small{display:block}
+.credit-registry-summary-v24 strong{font-size:9px}
+.credit-registry-summary-v24 small{font-size:7px;color:#7f8792;margin-top:3px}
+.credit-registry-summary-v24 button{
+  height:32px;padding:0 9px;border-radius:8px;border:1px solid #353a43;
+  background:#15181d;color:#aeb5c0;font-size:8px;font-weight:800
+}
+.credit-customer-registry-list-v24{display:grid;gap:8px}
+.credit-customer-registry-row-v24{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:10px 11px;border:1px solid #242932;border-radius:10px;background:#0f1115
+}
+.credit-customer-registry-row-v24 strong,.credit-customer-registry-row-v24 small{display:block}
+.credit-customer-registry-row-v24 strong{font-size:10px}
+.credit-customer-registry-row-v24 small{font-size:7px;color:#7d8590;margin-top:3px}
+.credit-customer-registry-row-v24>span{
+  padding:4px 7px;border-radius:999px;background:rgba(43,210,138,.08);
+  color:var(--green);border:1px solid rgba(43,210,138,.2);font-size:7px;font-weight:800
+}
+.credit-customer-registry-row-v24>span.off{background:#16191e;color:#7b838e;border-color:#2c3138}
+@media(max-width:560px){
+  .credit-registry-summary-v24{grid-template-columns:auto 1fr}
+  .credit-registry-summary-v24 button{grid-column:1/-1;width:100%}
+}
