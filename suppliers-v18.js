@@ -23,10 +23,10 @@
         changed=true;
       }
     });
-    if(changed || extras.some(s=>!JSON.parse(localStorage.getItem('mt_suppliers')||'[]').some(x=>Number(x.id)===s.id))){
+    if(changed || extras.some(s=>!MotoTudoData.read('mt_suppliers',[]).some(x=>Number(x.id)===s.id))){
       try{persist()}catch(e){
-        localStorage.setItem('mt_products',JSON.stringify(products));
-        localStorage.setItem('mt_suppliers',JSON.stringify(suppliers));
+        MotoTudoData.write('mt_products',products);
+        MotoTudoData.write('mt_suppliers',suppliers);
       }
     }
   }
