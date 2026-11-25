@@ -3,11 +3,11 @@
   const KEY='mt_credit_customers';
 
   function getCustomersV24(){
-    try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}
+    return MotoTudoData.read(KEY,[])
   }
-  function saveCustomersV24(v){localStorage.setItem(KEY,JSON.stringify(v))}
+  function saveCustomersV24(v){MotoTudoData.write(KEY,v)}
   function ordersV24(){
-    try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
+    return MotoTudoData.read('mt_orders',[])
   }
   function normV24(s){
     return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
