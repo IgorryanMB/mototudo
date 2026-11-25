@@ -1,0 +1,28 @@
+
+/* Financeiro por pedidos v13 */
+.finance-order-list-v13{display:grid;gap:10px}
+.finance-order-card-v13{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid #252a32;border-radius:14px;background:#0e1014;cursor:pointer;transition:.16s}
+.finance-order-card-v13:hover{border-color:#554919;background:#12151a;transform:translateY(-1px)}
+.finance-order-icon-v13{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:rgba(246,200,0,.09);color:var(--gold);font-size:18px}
+.finance-order-main-v13{min-width:0}
+.finance-order-title-v13{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.finance-order-title-v13 strong{font-size:11px}
+.finance-order-main-v13>small{display:block;margin-top:4px;color:#747c88;font-size:8px}
+.finance-order-meta-v13{display:flex;gap:12px;margin-top:7px;color:#8a929e;font-size:8px}
+.finance-order-total-v13{text-align:right}
+.finance-order-total-v13 span,.finance-order-total-v13 strong{display:block}
+.finance-order-total-v13 span{font-size:7px;color:#6e7682;text-transform:uppercase}
+.finance-order-total-v13 strong{font-size:15px;color:var(--green);margin-top:3px}
+.finance-order-total-v13 button{margin-top:7px;border:0;background:transparent;color:var(--gold);font-size:8px;font-weight:800;padding:0}
+.finance-order-products-v13{display:grid;gap:8px}
+.finance-order-products-v13>div{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:10px 12px;border:1px solid #242932;border-radius:10px;background:#0e1014}
+.finance-order-products-v13 strong,.finance-order-products-v13 small{display:block}
+.finance-order-products-v13 strong{font-size:10px}
+.finance-order-products-v13 small{font-size:8px;color:#747c88;margin-top:3px}
+.finance-order-products-v13 b{font-size:10px}
+@media(max-width:640px){
+  .finance-order-card-v13{grid-template-columns:auto minmax(0,1fr)}
+  .finance-order-total-v13{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;text-align:left;border-top:1px solid #20242b;padding-top:9px}
+  .finance-order-total-v13 span,.finance-order-total-v13 strong,.finance-order-total-v13 button{display:inline;margin:0}
+  .finance-order-meta-v13{flex-wrap:wrap}
+}
