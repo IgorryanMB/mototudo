@@ -12,7 +12,7 @@
   function normV10(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
 
   window.renderMovements=function(){
-    setHeader('Movimentações','Veja e edite pedidos vendidos, entradas e reposições.');
+    setHeader('Vendas','Gerencie pedidos, vendas concluídas, pedidos em aberto e baixas de estoque.');
     const rows=[...movements].sort((a,b)=>new Date(b.date)-new Date(a.date));
     const batches=getOrdersV10().sort((a,b)=>new Date(b.updatedAt||b.date)-new Date(a.updatedAt||a.date));
 
@@ -27,7 +27,7 @@
 
         <article class="panel page-panel">
           <div class="panel-header">
-            <div><span class="section-kicker">PEDIDOS E ENTRADAS</span><h2>Histórico agrupado</h2></div>
+            <div><span class="section-kicker">VENDAS E PEDIDOS</span><h2>Pedidos e vendas</h2></div>
             <div class="toolbar">
               <button class="outline-button" id="mvIn"><i class="bi bi-plus-circle"></i>Nova reposição</button>
               <button class="outline-button" id="mvOut"><i class="bi bi-receipt"></i>Novo pedido</button>
@@ -68,7 +68,7 @@
         </article>
 
         <article class="panel page-panel">
-          <div class="panel-header compact"><div><span class="section-kicker">HISTÓRICO TÉCNICO</span><h2>Itens movimentados</h2></div></div>
+          <div class="panel-header compact"><div><span class="section-kicker">HISTÓRICO</span><h2>Itens vendidos e movimentados</h2></div></div>
           <div class="table-responsive"><table class="table inventory-table movement-history-table">
             <thead><tr><th>Data</th><th>Pedido / lote</th><th>Tipo</th><th>Produto</th><th>Qtd.</th><th>Localização</th><th>Valor unit.</th></tr></thead>
             <tbody>${rows.map(m=>`<tr>
