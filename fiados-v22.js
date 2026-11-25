@@ -204,13 +204,22 @@
       const o=getOrdersV22().find(x=>Number(x.id)===Number(id));
       if(!o)return;
       const pays=paymentsV23(o);
-      openModal('Detalhes do fiado • '+(o.creditName||o.code),
-        '<div class="credit-detail-v23"><div class="credit-detail-summary-v23"><div><span>Total</span><b>'+money(totalV22(o))+'</b></div><div><span>Pago</span><b class="money-positive">'+money(paidV23(o))+'</b></div><div><span>Falta</span><b>'+money(dueV23(o))+'</b></div></div>'+
-        '<div class="credit-history-title-v23">Pagamentos</div>'+
+      const items=(o.items||[]).map((i,k)=>
+        '<div class="credit-sale-item-v25"><span class="credit-sale-number-v25">'+(k+1)+'</span><div><strong>'+esc(i.product||'Produto')+'</strong><small>'+Number(i.qty||0)+' un. × '+money(i.unit||0)+'</small></div><b>'+money(Number(i.qty||0)*Number(i.unit||0))+'</b></div>'
+      ).join('');
+      openModal('Venda • '+(o.code||''),
+        '<div class="credit-detail-v23">'+
+        '<div class="credit-sale-head-v25"><div><span>Cliente</span><strong>'+esc(o.creditName||'Sem nome')+'</strong></div><div><span>Moto</span><strong>'+esc(o.bike||'Não informada')+'</strong></div><div><span>Placa</span><strong>'+esc(o.plate||'Não informada')+'</strong></div><div><span>Data</span><strong>'+dateV22(o.date)+'</strong></div></div>'+
+        '<div class="credit-detail-summary-v23"><div><span>Total da venda</span><b>'+money(totalV22(o))+'</b></div><div><span>Já pagou</span><b class="money-positive">'+money(paidV23(o))+'</b></div><div><span>Falta pagar</span><b>'+money(dueV23(o))+'</b></div></div>'+
+        '<div class="credit-history-title-v23">Itens da venda</div>'+
+        '<div class="credit-sale-items-v25">'+items+(Number(o.labor||0)>0?'<div class="credit-sale-item-v25 labor"><span class="credit-sale-number-v25"><i class="bi bi-wrench-adjustable"></i></span><div><strong>Mão de obra</strong><small>Serviço</small></div><b>'+money(Number(o.labor||0))+'</b></div>':'')+'</div>'+
+        '<div class="credit-history-title-v23">Histórico de pagamentos</div>'+
         (pays.length?pays.map(p=>'<div class="credit-payment-row-v23"><span>'+dateV22(p.date)+(p.note?' • '+esc(p.note):'')+'</span><b>'+money(p.amount)+'</b></div>').join(''):'<div class="empty-state"><strong>Nenhum pagamento registrado</strong></div>')+
         '</div>',
-        '<button class="btn-dark-soft" data-close-action>Fechar</button>',false);
+        (dueV23(o)>0?'<button class="btn-gold" id="payFromCreditDetailV25">Registrar pagamento</button>':'')+'<button class="btn-dark-soft" data-close-action>Fechar</button>',false);
       document.querySelector('[data-close-action]').onclick=closeModal;
+      const pay=document.getElementById('payFromCreditDetailV25');
+      if(pay)pay.onclick=()=>{closeModal();openPaymentV23(o.id);};
     }
 
     document.querySelectorAll('[data-credit-filter-v22]').forEach(btn=>btn.onclick=()=>{
