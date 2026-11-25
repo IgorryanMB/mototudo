@@ -343,11 +343,13 @@
 
     openModal(
       'Finalizar pedido • '+o.code,
-      '<div class="pending-confirm-v15"><span><i class="bi bi-check2-circle"></i></span><div><strong>Dar baixa neste pedido?</strong><p>Os produtos serão descontados do estoque e o pedido passará a contar como venda no Financeiro.</p><b>'+esc(o.name||o.code)+' • '+money(totalV10(o))+'</b></div></div>',
+      '<div class="pending-confirm-v15"><span><i class="bi bi-check2-circle"></i></span><div><strong>Dar baixa neste pedido?</strong><p>Os produtos serão descontados do estoque e o pedido passará a contar como venda no Financeiro.</p><b>'+esc(o.name||o.code)+' • '+money(totalV10(o))+'</b></div></div><div class="form-field finish-payment-v21"><label>Forma de pagamento</label><select class="form-select-dark" id="finishPaymentV21"><option value="pix">Pix</option><option value="dinheiro">Dinheiro</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option><option value="fiado">Fiado</option><option value="outro">Outro</option></select></div>',
       '<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="confirmFinishV15">Dar baixa e finalizar</button>',
       true
     );
     document.querySelector('[data-close-action]').onclick=closeModal;
+    const finishPaymentV21=document.getElementById('finishPaymentV21');
+    if(finishPaymentV21) finishPaymentV21.value=o.payment||'pix';
     document.getElementById('confirmFinishV15').onclick=()=>{
       const now=new Date().toISOString();
       (o.items||[]).forEach((i,k)=>{
@@ -360,6 +362,7 @@
           location:p.location||'',date:now,note:'Finalização de pedido pendente '+o.code
         });
       });
+      o.payment=document.getElementById('finishPaymentV21')?.value||o.payment||'pix';
       o.status='completed';
       o.completedAt=now;
       o.updatedAt=now;
