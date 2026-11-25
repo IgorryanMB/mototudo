@@ -110,6 +110,22 @@
     };
   };
 
+  window.bindRowMenus=function(){
+    document.querySelectorAll('[data-edit-product]').forEach(el=>{
+      el.onclick=e=>{
+        if(e.target.closest('.stock-actions'))return;
+        const p=products.find(x=>x.id===Number(el.dataset.editProduct));
+        if(p)openProductModal(p);
+      };
+    });
+    document.querySelectorAll('[data-stock-in]').forEach(btn=>{
+      btn.onclick=e=>{e.stopPropagation();openMovementModal('in',Number(btn.dataset.stockIn));};
+    });
+    document.querySelectorAll('[data-stock-out]').forEach(btn=>{
+      btn.onclick=e=>{e.stopPropagation();openMovementModal('out',Number(btn.dataset.stockOut));};
+    });
+  };
+
   ensureSuppliersV18();
   try{render();}catch(e){console.error('Moto Tudo suppliers v18',e);}
 })();
