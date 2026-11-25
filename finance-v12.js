@@ -3,7 +3,8 @@
   const DEMO_KEY='mt_finance_demo_v12';
 
   function seedFinanceDemoV12(){
-    if(localStorage.getItem(DEMO_KEY)) return;
+    if(window.MOTO_TUDO_ENABLE_DEMO!==true) return;
+    if(MotoTudoData.flagGet(DEMO_KEY)) return;
 
     const demoSales=[
       {id:120001,orderCode:'PED-261121-001',productId:1,product:'Kit Relação 428H',qty:1,unit:169.90,date:'2026-11-21T10:22:00',note:'Venda balcão • CG 160'},
@@ -21,7 +22,7 @@
     demoSales.forEach(m=>{if(!existingIds.has(m.id)) movements.push({...m,type:'out',location:products.find(p=>p.id===m.productId)?.location||''});});
 
     let os=[];
-    try{os=JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch(e){os=[]}
+    os=MotoTudoData.read('mt_orders',[])
     const existingCodes=new Set(os.map(o=>o.code));
     const grouped={};
     demoSales.forEach(m=>{(grouped[m.orderCode]??=[]).push(m)});
@@ -41,10 +42,10 @@
       });
     });
 
-    localStorage.setItem('mt_orders',JSON.stringify(os));
-    localStorage.setItem('mt_movements',JSON.stringify(movements));
+    MotoTudoData.write('mt_orders',os);
+    MotoTudoData.write('mt_movements',movements);
     try{orders=os}catch(e){}
-    localStorage.setItem(DEMO_KEY,'1');
+    MotoTudoData.flagSet(DEMO_KEY,'1');
   }
 
   function ymdV12(date){
