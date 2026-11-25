@@ -82,7 +82,7 @@ function closeSidebar(){if(innerWidth<992) sidebarToggle.checked=false}
 function navigate(view,category=null){state.view=view;state.category=category;state.search='';state.status='all';state.categoryFilter='all';setActiveNav(view,category);closeSidebar();render()}
 
 document.getElementById('sidebarNav').addEventListener('click',e=>{const a=e.target.closest('[data-view]');if(!a)return;e.preventDefault();navigate(a.dataset.view,a.dataset.category||null)});
-document.getElementById('globalAddBtn').addEventListener('click',()=>openProductModal());
+document.getElementById('globalAddBtn').addEventListener('click',()=>openMovementModal('out'));
 document.getElementById('notificationBtn').addEventListener('click',()=>openAlertsModal());
 document.getElementById('logoutBtn').addEventListener('click',()=>toast('Sessão simulada','O logout está ativo apenas como demonstração neste protótipo.'));
 
@@ -142,12 +142,12 @@ function categoryCards(){return categories.map(c=>{const ps=products.filter(p=>p
 function filteredProducts(forceCategory){let list=[...products];const q=state.search.toLowerCase();if(forceCategory) list=list.filter(p=>p.category===forceCategory);if(state.categoryFilter!=='all')list=list.filter(p=>p.category===state.categoryFilter);if(state.status!=='all')list=list.filter(p=>getStatus(p)[0]===state.status);if(q)list=list.filter(p=>[p.name,p.code,p.brand,p.application,p.location].join(' ').toLowerCase().includes(q));return list}
 function renderProducts(forceCategory=null){
   const title=forceCategory||'Todos os produtos';setHeader(title,forceCategory?`Peças cadastradas na categoria ${forceCategory}.`:'Consulte, filtre, edite e movimente o estoque completo.');const list=filteredProducts(forceCategory);
-  appView.innerHTML=`<section class="panel inventory-panel"><div class="panel-header"><div><span class="section-kicker">ESTOQUE</span><h2>${esc(title)}</h2></div><div class="panel-tools"><div class="search-box"><i class="bi bi-search"></i><input id="productSearch" value="${esc(state.search)}" placeholder="Buscar peça, código, marca ou moto"></div><button class="filter-button" id="filtersBtn"><i class="bi bi-sliders"></i>Filtros</button><button class="outline-button" id="entryBtn"><i class="bi bi-box-arrow-in-down"></i>Entrada</button><button class="outline-button" id="exitBtn"><i class="bi bi-box-arrow-up"></i>Saída</button></div></div>
+  appView.innerHTML=`<section class="panel inventory-panel"><div class="panel-header"><div><span class="section-kicker">ESTOQUE</span><h2>${esc(title)}</h2></div><div class="panel-tools"><div class="search-box"><i class="bi bi-search"></i><input id="productSearch" value="${esc(state.search)}" placeholder="Buscar peça, código, marca ou moto"></div><button class="filter-button" id="filtersBtn"><i class="bi bi-sliders"></i>Filtros</button><button class="outline-button" id="entryBtn"><i class="bi bi-box-arrow-in-down"></i>Entrada</button><button class="outline-button" id="addProductBtn"><i class="bi bi-plus-circle"></i>Adicionar produto</button></div></div>
   <div class="category-chips"><button class="chip ${state.categoryFilter==='all'?'active':''}" data-filter-cat="all">Todos</button>${categories.map(c=>`<button class="chip ${state.categoryFilter===c.name?'active':''}" data-filter-cat="${esc(c.name)}">${esc(c.name.replace('Óleos e fluidos','Óleos').replace('Capacetes e acessórios','Acessórios'))}</button>`).join('')}</div><div class="table-responsive">${productTable(list)}</div><div class="table-footer"><span>Mostrando ${list.length} de ${products.length} produtos</span><button id="resetFilters">Limpar filtros</button></div></section>`;
   document.getElementById('productSearch').oninput=e=>{state.search=e.target.value;renderProducts(forceCategory);requestAnimationFrame(()=>{const n=document.getElementById('productSearch');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}})};
   document.querySelectorAll('[data-filter-cat]').forEach(b=>b.onclick=()=>{state.categoryFilter=b.dataset.filterCat;renderProducts(forceCategory)});
   document.getElementById('filtersBtn').onclick=()=>openFilterModal(forceCategory);
-  document.getElementById('entryBtn').onclick=()=>openMovementModal('in');document.getElementById('exitBtn').onclick=()=>openMovementModal('out');
+  document.getElementById('entryBtn').onclick=()=>openMovementModal('in');document.getElementById('addProductBtn').onclick=()=>openProductModal();
   document.getElementById('resetFilters').onclick=()=>{state.search='';state.status='all';state.categoryFilter='all';renderProducts(forceCategory)};
   bindRowMenus();
 }
