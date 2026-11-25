@@ -343,14 +343,23 @@
 
     openModal(
       'Finalizar pedido • '+o.code,
-      '<div class="pending-confirm-v15"><span><i class="bi bi-check2-circle"></i></span><div><strong>Dar baixa neste pedido?</strong><p>Os produtos serão descontados do estoque e o pedido passará a contar como venda no Financeiro.</p><b>'+esc(o.name||o.code)+' • '+money(totalV10(o))+'</b></div></div><div class="form-field finish-payment-v21"><label>Forma de pagamento</label><select class="form-select-dark" id="finishPaymentV21"><option value="pix">Pix</option><option value="dinheiro">Dinheiro</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option><option value="fiado">Fiado</option><option value="outro">Outro</option></select></div>',
+      '<div class="pending-confirm-v15"><span><i class="bi bi-check2-circle"></i></span><div><strong>Dar baixa neste pedido?</strong><p>Os produtos serão descontados do estoque e o pedido passará a contar como venda no Financeiro.</p><b>'+esc(o.name||o.code)+' • '+money(totalV10(o))+'</b></div></div><div class="form-field finish-payment-v21"><label>Forma de pagamento</label><select class="form-select-dark" id="finishPaymentV21"><option value="pix">Pix</option><option value="dinheiro">Dinheiro</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option><option value="fiado">Fiado</option><option value="outro">Outro</option></select></div><div class="form-field credit-name-wrap-v22" id="finishCreditWrapV22" style="display:none"><label>Nome de quem comprou fiado</label><input class="form-control-dark" id="finishCreditNameV22" value="'+esc(o.creditName||'')+'" placeholder="Ex.: João da Silva"></div>',
       '<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="confirmFinishV15">Dar baixa e finalizar</button>',
       true
     );
     document.querySelector('[data-close-action]').onclick=closeModal;
     const finishPaymentV21=document.getElementById('finishPaymentV21');
-    if(finishPaymentV21) finishPaymentV21.value=o.payment||'pix';
+    const finishCreditWrapV22=document.getElementById('finishCreditWrapV22');
+    const finishCreditNameV22=document.getElementById('finishCreditNameV22');
+    if(finishPaymentV21){
+      finishPaymentV21.value=o.payment||'pix';
+      const syncFinishCreditV22=()=>{if(finishCreditWrapV22)finishCreditWrapV22.style.display=finishPaymentV21.value==='fiado'?'':'none';};
+      finishPaymentV21.onchange=syncFinishCreditV22;syncFinishCreditV22();
+    }
     document.getElementById('confirmFinishV15').onclick=()=>{
+      const selectedPayment=document.getElementById('finishPaymentV21')?.value||o.payment||'pix';
+      const creditName=(document.getElementById('finishCreditNameV22')?.value||'').trim();
+      if(selectedPayment==='fiado'&&!creditName){toast('Informe o nome','Digite o nome de quem comprou fiado.','danger');return;}
       const now=new Date().toISOString();
       (o.items||[]).forEach((i,k)=>{
         const p=products.find(x=>Number(x.id)===Number(i.productId));
@@ -362,7 +371,9 @@
           location:p.location||'',date:now,note:'Finalização de pedido pendente '+o.code
         });
       });
-      o.payment=document.getElementById('finishPaymentV21')?.value||o.payment||'pix';
+      o.payment=selectedPayment;
+      o.creditName=selectedPayment==='fiado'?creditName:'';
+      o.creditStatus=selectedPayment==='fiado'?'open':'';
       o.status='completed';
       o.completedAt=now;
       o.updatedAt=now;
