@@ -7,7 +7,7 @@
     localStorage.setItem('mt_orders',JSON.stringify(v));
     try{orders=v}catch(e){}
   }
-  function totalV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0)}
+  function totalV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0)+Number(o.labor||0)}
   function unitsV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0),0)}
   function normV10(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
 
@@ -99,7 +99,7 @@
         <div class="order-detail-meta-v9">
           <div><span>Nome</span><strong>${esc(o.name||o.code||'Sem nome')}</strong></div>
           <div><span>Moto</span><strong>${esc(o.bike||'Não informada')}</strong></div>
-          <div><span>Referência</span><strong>${esc(o.note||'Sem referência')}</strong></div>
+          <div><span>Mão de obra</span><strong>${money(Number(o.labor||0))}</strong></div>
           <div><span>Total</span><strong class="order-detail-total-v9">${money(totalV10(o))}</strong></div>
         </div>
         <div class="order-detail-items-v9">${(o.items||[]).map((i,k)=>`
@@ -141,6 +141,11 @@
           <div class="form-field"><label>Moto</label><input class="form-control-dark" id="editOrderBikeV11" value="${esc(o.bike||'')}" placeholder="Ex.: CG 160 2023"></div>
           <div class="form-field full"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
         </div>
+        ${isOut?`<div class="labor-box-v14">
+          <div class="labor-icon-v14"><i class="bi bi-wrench-adjustable-circle"></i></div>
+          <div class="labor-copy-v14"><strong>Mão de obra</strong><small>Valor do serviço realizado</small></div>
+          <div class="labor-input-v14"><span>R$</span><input id="editLaborV14" type="number" min="0" step="0.01" value="${Number(o.labor||0)}"></div>
+        </div>`:''}
 
         <div class="product-picker-v8">
           <label>Adicionar outro produto</label>
@@ -185,7 +190,7 @@
       search.value='';renderDraft();renderResults('');search.focus();
     }
 
-    function calc(){document.getElementById('editTotalV10').textContent=money(draft.reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0))}
+    function calc(){const items=draft.reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0);const labor=isOut?Number(document.getElementById('editLaborV14')?.value||0):0;document.getElementById('editTotalV10').textContent=money(items+labor)}
 
     function renderDraft(){
       count.textContent=draft.length;
@@ -216,6 +221,7 @@
     search.onfocus=()=>renderResults(search.value);
     document.querySelector('[data-close-action]').onclick=closeModal;
     renderResults('');renderDraft();
+    if(isOut&&document.getElementById('editLaborV14')) document.getElementById('editLaborV14').oninput=calc;
 
     document.getElementById('saveEditV10').onclick=()=>{
       if(!draft.length){toast('Pedido vazio','Mantenha pelo menos um item.','danger');return;}
@@ -287,6 +293,7 @@
       o.name=(document.getElementById('editOrderNameV11')?.value||'').trim()||o.code;
       o.bike=(document.getElementById('editOrderBikeV11')?.value||'').trim();
       o.note=document.getElementById('editOrderNoteV10').value.trim();
+      o.labor=isOut?Number(document.getElementById('editLaborV14')?.value||0):0;
       o.updatedAt=now;
 
       setOrdersV10(all);
