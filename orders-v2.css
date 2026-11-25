@@ -46,3 +46,51 @@
 .stock-action.minus{color:var(--red);background:rgba(255,96,108,.06)}
 .stock-action.plus:hover{border-color:rgba(43,210,138,.45);background:rgba(43,210,138,.12);transform:translateY(-1px)}
 .stock-action.minus:hover{border-color:rgba(255,96,108,.45);background:rgba(255,96,108,.12);transform:translateY(-1px)}
+
+
+/* modal multi-itens responsivo v5 */
+.modal-card:has(#movementForm){
+  width:min(980px,96vw);
+}
+.modal-card:has(#movementForm) .modal-body{
+  overflow-x:hidden;
+}
+.modal-card:has(#movementForm) .movement-item-grid.entry-grid{
+  grid-template-columns:minmax(250px,1.8fr) 90px 120px minmax(220px,1.4fr);
+}
+.modal-card:has(#movementForm) .movement-item-grid.sale-grid{
+  grid-template-columns:minmax(300px,2fr) 100px 140px;
+}
+@media(max-width:900px){
+  .modal-card:has(#movementForm){
+    width:min(700px,96vw);
+  }
+  .modal-card:has(#movementForm) .movement-item-grid.entry-grid,
+  .modal-card:has(#movementForm) .movement-item-grid.sale-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .modal-card:has(#movementForm) .movement-item-grid .product-pick,
+  .modal-card:has(#movementForm) .movement-item-grid .location-pick{
+    grid-column:1/-1;
+  }
+}
+@media(max-width:560px){
+  .modal-card:has(#movementForm){
+    width:calc(100vw - 16px);
+    max-height:94vh;
+  }
+  .modal-card:has(#movementForm) .movement-item-grid.entry-grid,
+  .modal-card:has(#movementForm) .movement-item-grid.sale-grid{
+    grid-template-columns:1fr;
+  }
+  .modal-card:has(#movementForm) .movement-item-grid .product-pick,
+  .modal-card:has(#movementForm) .movement-item-grid .location-pick{
+    grid-column:auto;
+  }
+  .modal-card:has(#movementForm) .modal-actions{
+    position:sticky;
+    bottom:0;
+    background:#101216;
+    z-index:2;
+  }
+}
