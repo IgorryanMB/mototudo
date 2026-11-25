@@ -16,6 +16,19 @@
   function dateV22(v){
     return new Date(v).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
   }
+  function paymentsV23(o){
+    if(Array.isArray(o.creditPayments))return o.creditPayments;
+    if(o.creditStatus==='paid')return [{id:'legacy-'+o.id,amount:totalV22(o),date:o.creditPaidAt||o.updatedAt||o.date,note:'Pagamento total'}];
+    return [];
+  }
+  function paidV23(o){return paymentsV23(o).reduce((s,p)=>s+Number(p.amount||0),0)}
+  function dueV23(o){return Math.max(0,totalV22(o)-paidV23(o))}
+  function creditStateV23(o){
+    const due=dueV23(o),paid=paidV23(o);
+    if(due<=0.009)return 'paid';
+    if(paid>0)return 'partial';
+    return 'open';
+  }
 
   function seedCreditDemoV22(){
     const all=getOrdersV22();
@@ -38,18 +51,18 @@
     setHeader('Fiados','Controle quem comprou fiado, valores em aberto e pagamentos recebidos.');
 
     const all=getOrdersV22().filter(o=>o.type==='out'&&o.payment==='fiado');
-    const open=all.filter(o=>(o.creditStatus||'open')==='open');
-    const paid=all.filter(o=>o.creditStatus==='paid');
-    const openTotal=open.reduce((s,o)=>s+totalV22(o),0);
-    const paidTotal=paid.reduce((s,o)=>s+totalV22(o),0);
+    const open=all.filter(o=>creditStateV23(o)!=='paid');
+    const paid=all.filter(o=>creditStateV23(o)==='paid');
+    const openTotal=all.reduce((s,o)=>s+dueV23(o),0);
+    const paidTotal=all.reduce((s,o)=>s+paidV23(o),0);
     const names=[...new Set(all.map(o=>(o.creditName||'Sem nome').trim()))];
 
     appView.innerHTML=`
       <section class="page-stack">
         <div class="kpi-row">
-          <div class="metric-card"><span>Total em aberto</span><strong class="credit-open-money-v22">${money(openTotal)}</strong><small>${open.length} pedido(s) para receber</small></div>
+          <div class="metric-card"><span>A receber</span><strong class="credit-open-money-v22">${money(openTotal)}</strong><small>${open.length} pedido(s) com saldo</small></div>
           <div class="metric-card"><span>Clientes fiado</span><strong>${names.length}</strong><small>Pessoas cadastradas</small></div>
-          <div class="metric-card"><span>Já recebido</span><strong class="money-positive">${money(paidTotal)}</strong><small>${paid.length} pedido(s) quitado(s)</small></div>
+          <div class="metric-card"><span>Já recebido</span><strong class="money-positive">${money(paidTotal)}</strong><small>Somatório dos pagamentos</small></div>
           <div class="metric-card"><span>Total histórico</span><strong>${money(openTotal+paidTotal)}</strong><small>Vendas feitas no fiado</small></div>
         </div>
 
@@ -65,6 +78,7 @@
             </div>
             <div class="credit-tabs-v22">
               <button class="active" data-credit-filter-v22="open">Em aberto</button>
+              <button data-credit-filter-v22="partial">Parciais</button>
               <button data-credit-filter-v22="paid">Pagos</button>
               <button data-credit-filter-v22="all">Todos</button>
             </div>
@@ -80,7 +94,8 @@
     function renderList(){
       const q=normV22(search.value);
       let list=[...all].sort((a,b)=>new Date(b.date)-new Date(a.date));
-      if(status!=='all')list=list.filter(o=>(o.creditStatus||'open')===status);
+      if(status==='open')list=list.filter(o=>creditStateV23(o)!=='paid');
+      else if(status!=='all')list=list.filter(o=>creditStateV23(o)===status);
       if(q)list=list.filter(o=>normV22([o.creditName,o.name,o.code,o.bike,o.plate,o.note].join(' ')).includes(q));
 
       const grouped={};
@@ -92,14 +107,16 @@
       const root=document.getElementById('creditListV22');
       const entries=Object.entries(grouped);
       root.innerHTML=entries.length?entries.map(([name,orders])=>{
-        const due=orders.reduce((s,o)=>s+totalV22(o),0);
-        const openCount=orders.filter(o=>(o.creditStatus||'open')==='open').length;
+        const total=orders.reduce((s,o)=>s+totalV22(o),0);
+        const paidNow=orders.reduce((s,o)=>s+paidV23(o),0);
+        const due=orders.reduce((s,o)=>s+dueV23(o),0);
+        const openCount=orders.filter(o=>creditStateV23(o)!=='paid').length;
         return `
           <article class="credit-customer-v22">
             <div class="credit-customer-head-v22">
               <div class="credit-avatar-v22"><i class="bi bi-person-fill"></i></div>
               <div class="grow"><strong>${esc(name)}</strong><small>${orders.length} pedido(s) • ${openCount} em aberto</small></div>
-              <div class="credit-customer-total-v22"><span>Total exibido</span><b>${money(due)}</b></div>
+              <div class="credit-customer-total-v22"><span>Total</span><b>${money(total)}</b><small>Pago ${money(paidNow)} • Deve ${money(due)}</small></div>
             </div>
             <div class="credit-orders-v22">
               ${orders.map(o=>`
@@ -109,32 +126,64 @@
                     <small><span class="code">${esc(o.code||'')}</span>${o.bike?' • '+esc(o.bike):''}${o.plate?' • '+esc(o.plate):''} • ${dateV22(o.date)}</small>
                   </div>
                   <div class="credit-order-value-v22">
-                    <span>${(o.creditStatus||'open')==='paid'?'Pago':'Em aberto'}</span>
-                    <b>${money(totalV22(o))}</b>
+                    <span>Total</span><b>${money(totalV22(o))}</b>
+                    <small>Pago ${money(paidV23(o))} • Falta ${money(dueV23(o))}</small>
                   </div>
                   <div class="credit-order-actions-v22">
-                    ${(o.creditStatus||'open')==='open'
-                      ?`<button data-credit-pay-v22="${o.id}"><i class="bi bi-check2-circle"></i> Marcar como pago</button>`
-                      :`<button class="secondary" data-credit-reopen-v22="${o.id}"><i class="bi bi-arrow-counterclockwise"></i> Reabrir</button>`}
+                    <button class="secondary" data-credit-view-v23="${o.id}"><i class="bi bi-eye"></i> Ver pedido</button>
+                    ${dueV23(o)>0
+                      ?`<button data-credit-pay-v23="${o.id}"><i class="bi bi-cash-coin"></i> Registrar pagamento</button>`
+                      :`<span class="credit-paid-badge-v23"><i class="bi bi-check2-circle"></i> Quitado</span>`}
                   </div>
                 </div>`).join('')}
             </div>
           </article>`;
       }).join(''):'<div class="empty-state"><i class="bi bi-journal-check"></i><strong>Nenhum fiado encontrado</strong><span>Os pedidos pagos como Fiado aparecerão aqui.</span></div>';
 
-      root.querySelectorAll('[data-credit-pay-v22]').forEach(btn=>btn.onclick=()=>markPaidV22(Number(btn.dataset.creditPayV22),true));
-      root.querySelectorAll('[data-credit-reopen-v22]').forEach(btn=>btn.onclick=()=>markPaidV22(Number(btn.dataset.creditReopenV22),false));
+      root.querySelectorAll('[data-credit-pay-v23]').forEach(btn=>btn.onclick=()=>openPaymentV23(Number(btn.dataset.creditPayV23)));
+      root.querySelectorAll('[data-credit-view-v23]').forEach(btn=>btn.onclick=()=>openCreditDetailV23(Number(btn.dataset.creditViewV23)));
     }
 
-    function markPaidV22(id,paidState){
+    function openPaymentV23(id){
       const orders=getOrdersV22();
       const o=orders.find(x=>Number(x.id)===Number(id));
       if(!o)return;
-      o.creditStatus=paidState?'paid':'open';
-      o.creditPaidAt=paidState?new Date().toISOString():null;
-      saveOrdersV22(orders);
-      toast(paidState?'Fiado quitado':'Fiado reaberto',esc(o.creditName||o.name||o.code),paidState?'success':'danger');
-      renderFiadosV22();
+      const due=dueV23(o);
+      openModal('Registrar pagamento',
+        '<div class="form-field"><label>Cliente</label><input class="form-control-dark" value="'+esc(o.creditName||'Sem nome')+'" disabled></div>'+
+        '<div class="form-field"><label>Valor total do pedido</label><input class="form-control-dark" value="'+money(totalV22(o))+'" disabled></div>'+
+        '<div class="form-field"><label>Já pagou</label><input class="form-control-dark" value="'+money(paidV23(o))+'" disabled></div>'+
+        '<div class="form-field"><label>Valor pago agora</label><input class="form-control-dark" id="partialPaymentV23" type="number" min="0.01" max="'+due.toFixed(2)+'" step="0.01" value="'+due.toFixed(2)+'"></div>'+
+        '<div class="form-field"><label>Observação</label><input class="form-control-dark" id="partialPaymentNoteV23" placeholder="Ex.: Pix, dinheiro, parcela..."></div>',
+        '<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="confirmPartialPaymentV23">Confirmar pagamento</button>',true);
+      document.querySelector('[data-close-action]').onclick=closeModal;
+      document.getElementById('confirmPartialPaymentV23').onclick=()=>{
+        const amount=Number(document.getElementById('partialPaymentV23').value||0);
+        const note=(document.getElementById('partialPaymentNoteV23').value||'').trim();
+        if(amount<=0){toast('Valor inválido','Digite um valor maior que zero.','danger');return;}
+        if(amount>due+0.009){toast('Valor maior que a dívida','O máximo é '+money(due)+'.','danger');return;}
+        const all=getOrdersV22();
+        const current=all.find(x=>Number(x.id)===Number(id));
+        current.creditPayments=paymentsV23(current).concat([{id:Date.now(),amount,date:new Date().toISOString(),note}]);
+        current.creditStatus=creditStateV23(current);
+        current.creditPaidAt=current.creditStatus==='paid'?new Date().toISOString():null;
+        saveOrdersV22(all);closeModal();
+        toast(current.creditStatus==='paid'?'Fiado quitado':'Pagamento parcial registrado',money(amount)+' recebido.','success');
+        renderFiadosV22();
+      };
+    }
+
+    function openCreditDetailV23(id){
+      const o=getOrdersV22().find(x=>Number(x.id)===Number(id));
+      if(!o)return;
+      const pays=paymentsV23(o);
+      openModal('Detalhes do fiado • '+(o.creditName||o.code),
+        '<div class="credit-detail-v23"><div class="credit-detail-summary-v23"><div><span>Total</span><b>'+money(totalV22(o))+'</b></div><div><span>Pago</span><b class="money-positive">'+money(paidV23(o))+'</b></div><div><span>Falta</span><b>'+money(dueV23(o))+'</b></div></div>'+
+        '<div class="credit-history-title-v23">Pagamentos</div>'+
+        (pays.length?pays.map(p=>'<div class="credit-payment-row-v23"><span>'+dateV22(p.date)+(p.note?' • '+esc(p.note):'')+'</span><b>'+money(p.amount)+'</b></div>').join(''):'<div class="empty-state"><strong>Nenhum pagamento registrado</strong></div>')+
+        '</div>',
+        '<button class="btn-dark-soft" data-close-action>Fechar</button>',false);
+      document.querySelector('[data-close-action]').onclick=closeModal;
     }
 
     document.querySelectorAll('[data-credit-filter-v22]').forEach(btn=>btn.onclick=()=>{
