@@ -1,0 +1,35 @@
+
+/* Busca no financeiro v17 */
+.finance-search-v17{
+  position:relative;
+  margin:0 0 14px;
+}
+.finance-search-v17 i{
+  position:absolute;
+  left:13px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#6f7784;
+  pointer-events:none;
+}
+.finance-search-v17 input{
+  width:100%;
+  height:42px;
+  border:1px solid #292e36;
+  background:#0d0f13;
+  color:#fff;
+  border-radius:10px;
+  padding:0 13px 0 39px;
+  font-size:11px;
+  outline:none;
+}
+.finance-search-v17 input:focus{
+  border-color:#655710;
+  box-shadow:0 0 0 3px rgba(246,200,0,.05);
+}
+@media(max-width:560px){
+  .finance-search-v17 input{
+    height:44px;
+    font-size:16px;
+  }
+}
