@@ -4,7 +4,7 @@
     try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
   }
   function setOrdersV10(v){
-    localStorage.setItem('mt_orders',JSON.stringify(v));
+    MotoTudoData.write('mt_orders',v);
     try{orders=v}catch(e){}
   }
   function totalV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0)+Number(o.labor||0)}
