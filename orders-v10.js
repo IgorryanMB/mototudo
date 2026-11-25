@@ -35,19 +35,25 @@
             </div>
           </div>
 
-          <div class="order-search-v11">
-            <i class="bi bi-search"></i>
-            <input id="orderSearchV11" placeholder="Pesquisar por nome, número, cliente, referência ou produto...">
+          <div class="order-filter-v16">
+            <div class="order-filter-tabs-v16">
+              <button class="active" data-order-filter-mode="name"><i class="bi bi-person-badge"></i> Nome</button>
+              <button data-order-filter-mode="plate"><i class="bi bi-card-text"></i> Placa</button>
+            </div>
+            <div class="order-search-v11">
+              <i class="bi bi-search"></i>
+              <input id="orderSearchV11" placeholder="Pesquisar pelo nome do pedido...">
+            </div>
           </div>
 
           <div class="order-list-v9" id="orderListV11">
             ${batches.length?batches.map(o=>`
-              <article class="order-card-v9" data-order-search="${esc([o.name||o.code,o.code,o.bike,o.note,...(o.items||[]).map(i=>i.product)].join(' ').toLowerCase())}">
+              <article class="order-card-v9" data-order-name="${esc((o.name||o.code||'').toLowerCase())}" data-order-plate="${esc((o.plate||'').toLowerCase())}">
                 <div class="order-card-v9-main">
                   <span class="order-icon ${o.type==='out'?'out':'in'}"><i class="bi ${o.type==='out'?'bi-receipt-cutoff':'bi-box-arrow-in-down'}"></i></span>
                   <div class="order-card-v9-info">
                     <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong>${o.status==='pending'?'<span class="badge-pending-v15"><i class="bi bi-clock-history"></i> Pendente</span>':`<span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span>`}</div>
-                    <small><span class="code">${esc(o.code||'Sem código')}</span>${o.bike?' • '+esc(o.bike):''} • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
+                    <small><span class="code">${esc(o.code||'Sem código')}</span>${o.bike?' • '+esc(o.bike):''}${o.plate?' • Placa '+esc(o.plate):''} • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
                     ${o.updatedAt?`<em>Última alteração: ${fmtDate(o.updatedAt)}</em>`:''}
                   </div>
                   <div class="order-card-v9-total"><span>Total</span><strong>${money(totalV10(o))}</strong></div>
@@ -81,14 +87,23 @@
     document.querySelectorAll('[data-edit-v10]').forEach(b=>b.onclick=()=>openEditV10(Number(b.dataset.editV10)));
     document.querySelectorAll('[data-finish-v15]').forEach(b=>b.onclick=()=>finalizePendingV15(Number(b.dataset.finishV15)));
     const orderSearch=document.getElementById('orderSearchV11');
-    if(orderSearch){
-      orderSearch.oninput=()=>{
-        const q=normV10(orderSearch.value);
-        document.querySelectorAll('#orderListV11 .order-card-v9').forEach(card=>{
-          card.style.display=!q||normV10(card.dataset.orderSearch).includes(q)?'':'none';
-        });
-      };
-    }
+    let orderFilterMode='name';
+    const applyOrderFilterV16=()=>{
+      const q=normV10(orderSearch?.value||'');
+      document.querySelectorAll('#orderListV11 .order-card-v9').forEach(card=>{
+        const hay=orderFilterMode==='plate'?normV10(card.dataset.orderPlate):normV10(card.dataset.orderName);
+        card.style.display=!q||hay.includes(q)?'':'none';
+      });
+    };
+    document.querySelectorAll('[data-order-filter-mode]').forEach(btn=>btn.onclick=()=>{
+      orderFilterMode=btn.dataset.orderFilterMode;
+      document.querySelectorAll('[data-order-filter-mode]').forEach(x=>x.classList.toggle('active',x===btn));
+      orderSearch.value='';
+      orderSearch.placeholder=orderFilterMode==='plate'?'Pesquisar pela placa...':'Pesquisar pelo nome do pedido...';
+      applyOrderFilterV16();
+      orderSearch.focus();
+    });
+    if(orderSearch) orderSearch.oninput=applyOrderFilterV16;
   };
 
   function openViewV10(id){
@@ -100,6 +115,7 @@
         <div class="order-detail-meta-v9">
           <div><span>Nome</span><strong>${esc(o.name||o.code||'Sem nome')}</strong></div>
           <div><span>Moto</span><strong>${esc(o.bike||'Não informada')}</strong></div>
+          <div><span>Placa</span><strong>${esc(o.plate||'Não informada')}</strong></div>
           <div><span>Mão de obra</span><strong>${money(Number(o.labor||0))}</strong></div>
           <div><span>Total</span><strong class="order-detail-total-v9">${money(totalV10(o))}</strong></div>
         </div>
@@ -141,7 +157,8 @@
         <div class="movement-meta">
           <div class="form-field"><label>Nome / apelido do pedido</label><input class="form-control-dark" id="editOrderNameV11" value="${esc(o.name||o.code||'')}"></div>
           <div class="form-field"><label>Moto</label><input class="form-control-dark" id="editOrderBikeV11" value="${esc(o.bike||'')}" placeholder="Ex.: CG 160 2023"></div>
-          <div class="form-field full"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
+          <div class="form-field"><label>Placa</label><input class="form-control-dark plate-input-v16" id="editOrderPlateV16" maxlength="8" value="${esc(o.plate||'')}" placeholder="Ex.: ABC1D23"></div>
+          <div class="form-field"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
         </div>
         ${isOut?`<div class="labor-box-v14">
           <div class="labor-icon-v14"><i class="bi bi-wrench-adjustable-circle"></i></div>
@@ -223,6 +240,8 @@
     search.onfocus=()=>renderResults(search.value);
     document.querySelector('[data-close-action]').onclick=closeModal;
     renderResults('');renderDraft();
+    const editPlateV16=document.getElementById('editOrderPlateV16');
+    if(editPlateV16) editPlateV16.oninput=()=>{editPlateV16.value=editPlateV16.value.toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,8);};
     if(isOut&&document.getElementById('editLaborV14')) document.getElementById('editLaborV14').oninput=calc;
 
     document.getElementById('saveEditV10').onclick=()=>{
@@ -296,6 +315,7 @@
       }));
       o.name=(document.getElementById('editOrderNameV11')?.value||'').trim()||o.code;
       o.bike=(document.getElementById('editOrderBikeV11')?.value||'').trim();
+      o.plate=(document.getElementById('editOrderPlateV16')?.value||'').trim().toUpperCase();
       o.note=document.getElementById('editOrderNoteV10').value.trim();
       o.labor=isOut?Number(document.getElementById('editLaborV14')?.value||0):0;
       o.updatedAt=now;
