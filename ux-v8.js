@@ -4,7 +4,7 @@
     try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
   }
   function saveBatchesV8(v){
-    localStorage.setItem('mt_orders',JSON.stringify(v));
+    MotoTudoData.write('mt_orders',v);
     try{orders=v}catch(e){}
   }
   function batchCodeV8(type){
