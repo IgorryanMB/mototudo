@@ -126,7 +126,8 @@
         <div class="movement-meta">
           <div class="form-field"><label>${isOut?'Número do pedido':'Número da entrada'}</label><input class="form-control-dark" value="${code}" readonly></div>
           <div class="form-field"><label>Nome / apelido</label><input class="form-control-dark" id="batchNameV8" placeholder="${isOut?'Ex.: Revisão CG do João':'Ex.: Reposição Motul 25/11'}"></div>
-          <div class="form-field full"><label>${isOut?'Cliente / referência':'Fornecedor / referência'}</label><input class="form-control-dark" id="batchNoteV8" placeholder="${isOut?'Ex.: balcão, João, oficina...':'Ex.: fornecedor ou NF...'}"></div>
+          <div class="form-field"><label>Moto</label><input class="form-control-dark" id="batchBikeV8" placeholder="Ex.: CG 160 2023"></div>
+          <div class="form-field"><label>${isOut?'Cliente / referência':'Fornecedor / referência'}</label><input class="form-control-dark" id="batchNoteV8" placeholder="${isOut?'Ex.: João, oficina...':'Ex.: fornecedor ou NF...'}"></div>
         </div>
 
         <div class="product-picker-v8">
@@ -236,9 +237,10 @@
       }
 
       const name=(document.getElementById('batchNameV8')?.value||'').trim();
+      const bike=(document.getElementById('batchBikeV8')?.value||'').trim();
       const note=document.getElementById('batchNoteV8').value.trim();
       const date=new Date().toISOString();
-      const batch={id:Date.now(),code,type,date,name:name||code,note,items:[]};
+      const batch={id:Date.now(),code,type,date,name:name||code,bike,note,items:[]};
 
       selected.forEach((i,k)=>{
         const p=products.find(x=>x.id===i.productId);
