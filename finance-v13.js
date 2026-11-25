@@ -1,7 +1,7 @@
 
 (function(){
   function getOrdersV13(){
-    try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
+    return MotoTudoData.read('mt_orders',[])
   }
   function ymdV13(date){
     const d=new Date(date);
@@ -21,6 +21,7 @@
   }
 
   function ensureFinanceOrdersV13(){
+    if(window.MOTO_TUDO_ENABLE_DEMO!==true)return;
     let os=getOrdersV13();
     const demo=[
       {
@@ -82,7 +83,7 @@
 
     const codes=new Set(os.map(o=>o.code));
     demo.forEach(o=>{if(!codes.has(o.code))os.push(o)});
-    localStorage.setItem('mt_orders',JSON.stringify(os));
+    MotoTudoData.write('mt_orders',os);
     try{orders=os}catch(e){}
   }
 
