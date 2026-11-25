@@ -86,7 +86,7 @@ document.getElementById('globalAddBtn').addEventListener('click',()=>openProduct
 document.getElementById('notificationBtn').addEventListener('click',()=>openAlertsModal());
 document.getElementById('logoutBtn').addEventListener('click',()=>toast('Sessão simulada','O logout está ativo apenas como demonstração neste protótipo.'));
 
-function render(){syncChrome();if(state.view==='dashboard') return renderDashboard();if(state.view==='products') return renderProducts();if(state.view==='category') return renderProducts(state.category);if(state.view==='movements') return renderMovements();if(state.view==='finance') return renderFinance();if(state.view==='suppliers') return renderSuppliers();if(state.view==='settings') return renderSettings();}
+function render(){syncChrome();if(state.view==='dashboard') return renderDashboard();if(state.view==='products') return renderProducts();if(state.view==='category') return renderProducts(state.category);if(state.view==='movements') return renderMovements();if(state.view==='finance') return renderFinance();if(state.view==='fiados') return renderFiadosV22();if(state.view==='suppliers') return renderSuppliers();if(state.view==='settings') return renderSettings();}
 
 function renderDashboard(){
   setHeader('Gestão de Estoque','Controle rápido de peças, acessórios e reposição para motos.');
