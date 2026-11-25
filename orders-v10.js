@@ -210,17 +210,20 @@
       const ids=new Set([...oldMap.keys(),...newMap.keys()]);
 
       // Validate stock before applying deltas
-      if(isOut){
-        for(const pid of ids){
-          const p=products.find(x=>x.id===pid);
-          if(!p)continue;
-          const oldQty=oldMap.get(pid)||0;
-          const newQty=newMap.get(pid)||0;
-          const extra=newQty-oldQty;
-          if(extra>0 && extra>p.stock){
-            toast('Estoque insuficiente',p.name+': faltam '+(extra-p.stock)+' un. para salvar essa alteração.','danger');
-            return;
-          }
+      for(const pid of ids){
+        const p=products.find(x=>x.id===pid);
+        if(!p)continue;
+        const oldQty=oldMap.get(pid)||0;
+        const newQty=newMap.get(pid)||0;
+        const delta=newQty-oldQty;
+
+        if(isOut && delta>0 && delta>p.stock){
+          toast('Estoque insuficiente',p.name+': faltam '+(delta-p.stock)+' un. para salvar essa alteração.','danger');
+          return;
+        }
+        if(!isOut && delta<0 && Math.abs(delta)>p.stock){
+          toast('Não é possível reduzir a entrada',p.name+': parte desse estoque já pode ter sido utilizada.','danger');
+          return;
         }
       }
 
@@ -247,7 +250,7 @@
           movements.unshift({
             id:Date.now()+pid,
             orderId:o.id,orderCode:o.code,type:o.type,
-            productId:p.id,product:p.name,qty:Math.abs(delta),
+            productId:p.id,product:p.name,qty:delta,
             unit:Number(dItem?.unit||p.price||0),
             location:p.location||'',date:now,
             note:(delta>0?'Acréscimo em pedido editado':'Redução em pedido editado')+' '+o.code
