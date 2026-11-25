@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="fiados-v23.css?v=24" />
   <link rel="stylesheet" href="credit-customers-v24.css?v=25" />
   <link rel="stylesheet" href="fiados-v25.css?v=25" />
+  <link rel="stylesheet" href="navigation-v26.css?v=26" />
 </head>
 <body>
   <div id="toastArea" class="toast-area"></div>
@@ -48,22 +49,41 @@
       <span class="menu-label">Visão geral</span>
       <a class="nav-item active" href="#dashboard" data-view="dashboard"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
 
-      <span class="menu-label">Estoque</span>
-      <a class="nav-item" href="#products" data-view="products"><i class="bi bi-box-seam-fill"></i><span>Todos os produtos</span><span class="pill" id="productCountPill">0</span></a>
-      <a class="nav-item" href="#motor" data-view="category" data-category="Motor"><i class="bi bi-gear-wide-connected"></i><span>Motor</span></a>
-      <a class="nav-item" href="#freios" data-view="category" data-category="Freios"><i class="bi bi-record-circle"></i><span>Freios</span></a>
-      <a class="nav-item" href="#transmissao" data-view="category" data-category="Transmissão"><i class="bi bi-bezier2"></i><span>Transmissão</span></a>
-      <a class="nav-item" href="#eletrica" data-view="category" data-category="Elétrica"><i class="bi bi-lightning-charge-fill"></i><span>Elétrica</span></a>
-      <a class="nav-item" href="#oleos" data-view="category" data-category="Óleos e fluidos"><i class="bi bi-droplet-half"></i><span>Óleos e fluidos</span></a>
-      <a class="nav-item" href="#acessorios" data-view="category" data-category="Capacetes e acessórios"><i class="bi bi-shield-fill"></i><span>Capacetes e acessórios</span></a>
-      <a class="nav-item" href="#outras" data-view="category" data-category="Outras peças"><i class="bi bi-three-dots"></i><span>Outras peças</span></a>
+      <details class="nav-group-v26" open>
+        <summary>
+          <span class="nav-group-icon-v26"><i class="bi bi-box-seam-fill"></i></span>
+          <span>Estoque</span>
+          <i class="bi bi-chevron-down nav-group-chevron-v26"></i>
+        </summary>
+        <div class="nav-group-items-v26">
+          <a class="nav-item" href="#products" data-view="products"><i class="bi bi-boxes"></i><span>Todos os produtos</span><span class="pill" id="productCountPill">0</span></a>
+          <a class="nav-item" href="#motor" data-view="category" data-category="Motor"><i class="bi bi-gear-wide-connected"></i><span>Motor</span></a>
+          <a class="nav-item" href="#freios" data-view="category" data-category="Freios"><i class="bi bi-record-circle"></i><span>Freios</span></a>
+          <a class="nav-item" href="#transmissao" data-view="category" data-category="Transmissão"><i class="bi bi-bezier2"></i><span>Transmissão</span></a>
+          <a class="nav-item" href="#eletrica" data-view="category" data-category="Elétrica"><i class="bi bi-lightning-charge-fill"></i><span>Elétrica</span></a>
+          <a class="nav-item" href="#oleos" data-view="category" data-category="Óleos e fluidos"><i class="bi bi-droplet-half"></i><span>Óleos e fluidos</span></a>
+          <a class="nav-item" href="#acessorios" data-view="category" data-category="Capacetes e acessórios"><i class="bi bi-shield-fill"></i><span>Capacetes e acessórios</span></a>
+          <a class="nav-item" href="#outras" data-view="category" data-category="Outras peças"><i class="bi bi-three-dots"></i><span>Outras peças</span></a>
+          <a class="nav-item" href="#suppliers" data-view="suppliers"><i class="bi bi-people-fill"></i><span>Fornecedores</span></a>
+        </div>
+      </details>
 
-      <span class="menu-label">Gestão</span>
-      <a class="nav-item" href="#movements" data-view="movements"><i class="bi bi-receipt-cutoff"></i><span>Vendas</span></a>
-      <a class="nav-item" href="#fiados" data-view="fiados"><i class="bi bi-journal-text"></i><span>Fiados</span></a>
-      <a class="nav-item" href="#finance" data-view="finance"><i class="bi bi-cash-stack"></i><span>Financeiro</span></a>
-      <a class="nav-item" href="#suppliers" data-view="suppliers"><i class="bi bi-people-fill"></i><span>Fornecedores</span></a>
-      <a class="nav-item" href="#settings" data-view="settings"><i class="bi bi-gear-fill"></i><span>Configurações</span></a>
+      <details class="nav-group-v26" open>
+        <summary>
+          <span class="nav-group-icon-v26"><i class="bi bi-receipt-cutoff"></i></span>
+          <span>Vendas</span>
+          <i class="bi bi-chevron-down nav-group-chevron-v26"></i>
+        </summary>
+        <div class="nav-group-items-v26">
+          <a class="nav-item" href="#movements" data-view="movements"><i class="bi bi-receipt"></i><span>Vendas</span></a>
+          <a class="nav-item" href="#finance" data-view="finance"><i class="bi bi-cash-stack"></i><span>Financeiro</span></a>
+          <a class="nav-item" href="#fiados" data-view="fiados"><i class="bi bi-journal-text"></i><span>Fiados</span></a>
+        </div>
+      </details>
+
+      <div class="nav-system-v26">
+        <a class="nav-item" href="#settings" data-view="settings"><i class="bi bi-gear-fill"></i><span>Configurações</span></a>
+      </div>
     </nav>
 
     <button class="sidebar-user" id="logoutBtn" type="button">
@@ -86,14 +106,14 @@
       </div>
       <div class="top-actions">
         <button class="icon-button" id="notificationBtn" title="Alertas"><i class="bi bi-bell"></i><span class="notification-dot" id="notificationDot"></span></button>
-        <button class="btn btn-warning btn-add" id="globalAddBtn"><i class="bi bi-plus-lg"></i><span>Novo produto</span></button>
+        <button class="btn btn-warning btn-add" id="globalAddBtn"><i class="bi bi-receipt-cutoff"></i><span>Venda</span></button>
       </div>
     </header>
 
     <div id="appView"></div>
   </main>
 
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=26"></script>
   <script src="orders-v2.js?v=19"></script>
   <script src="fix-v3.js?v=19"></script>
   <script src="ux-v8.js?v=24"></script>
