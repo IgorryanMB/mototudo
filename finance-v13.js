@@ -8,7 +8,7 @@
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
   function orderRevenueV13(o){
-    return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0);
+    return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0)+Number(o.labor||0);
   }
   function orderCostV13(o){
     return (o.items||[]).reduce((s,i)=>{
@@ -118,7 +118,7 @@
         <div class="order-detail-meta-v9">
           <div><span>Pedido</span><strong>${esc(o.code||'—')}</strong></div>
           <div><span>Moto</span><strong>${esc(o.bike||'Não informada')}</strong></div>
-          <div><span>Cliente / referência</span><strong>${esc(o.note||'Não informado')}</strong></div>
+          <div><span>Mão de obra</span><strong>${money(Number(o.labor||0))}</strong></div>
           <div><span>Total</span><strong class="order-detail-total-v9">${money(orderRevenueV13(o))}</strong></div>
         </div>
         <div class="finance-order-products-v13">
@@ -127,6 +127,7 @@
               <div><strong>${esc(i.product)}</strong><small>${i.qty} un. × ${money(i.unit)}</small></div>
               <b>${money(Number(i.qty||0)*Number(i.unit||0))}</b>
             </div>`).join('')}
+          ${Number(o.labor||0)>0?`<div class="finance-labor-row-v14"><div><strong><i class="bi bi-wrench-adjustable"></i> Mão de obra</strong><small>Serviço</small></div><b>${money(Number(o.labor||0))}</b></div>`:''}
         </div>
       </div>`,
       '<button class="btn-gold" data-close-action>Fechar</button>',
