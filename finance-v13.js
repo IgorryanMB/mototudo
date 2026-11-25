@@ -142,7 +142,7 @@
     setHeader('Financeiro','Veja os pedidos vendidos por dia e o total faturado em cada venda.');
 
     const allOrders=getOrdersV13()
-      .filter(o=>o.type==='out')
+      .filter(o=>o.type==='out'&&o.status!=='pending')
       .sort((a,b)=>new Date(b.date)-new Date(a.date));
 
     const today=ymdV13(new Date());
