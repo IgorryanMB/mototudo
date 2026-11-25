@@ -53,6 +53,7 @@ function save(key,val){localStorage.setItem(key,JSON.stringify(val))}
 let products = load('mt_products', seedProducts);
 let movements = load('mt_movements', seedMovements);
 let suppliers = load('mt_suppliers', seedSuppliers);
+let orders = load('mt_orders', []);
 let settings = load('mt_settings', {storeName:'Moto Tudo', lowStockAlerts:true, saleAlerts:true, currency:'BRL'});
 let state = {view:'dashboard', category:null, search:'', status:'all', categoryFilter:'all'};
 
@@ -72,7 +73,7 @@ function totalSaleValue(){return products.reduce((s,p)=>s+(p.stock*p.price),0)}
 function monthMovements(type){const n=new Date();return movements.filter(m=>{const d=new Date(m.date);return m.type===type&&d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear()}).reduce((s,m)=>s+m.qty,0)}
 function salesRevenue(){return movements.filter(m=>m.type==='out').reduce((s,m)=>s+(m.qty*m.unit),0)}
 
-function persist(){save('mt_products',products);save('mt_movements',movements);save('mt_suppliers',suppliers);save('mt_settings',settings);syncChrome()}
+function persist(){save('mt_products',products);save('mt_movements',movements);save('mt_suppliers',suppliers);save('mt_orders',orders);save('mt_settings',settings);syncChrome()}
 function syncChrome(){document.getElementById('productCountPill').textContent=products.length;document.getElementById('storeNameMini').textContent=settings.storeName || 'Moto Tudo';document.getElementById('eyebrow').textContent=`${(settings.storeName||'Moto Tudo').toUpperCase()} • PEÇAS E ACESSÓRIOS`;document.getElementById('notificationDot').classList.toggle('hidden',!settings.lowStockAlerts || lowProducts().length===0)}
 function setHeader(title,subtitle){document.getElementById('pageTitle').textContent=title;document.getElementById('pageSubtitle').textContent=subtitle}
 function setActiveNav(view,category){document.querySelectorAll('.nav-item').forEach(a=>a.classList.toggle('active',a.dataset.view===view && (view!=='category'||a.dataset.category===category)))}
