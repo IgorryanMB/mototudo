@@ -1,7 +1,7 @@
 
 (function(){
   function getOrdersV10(){
-    try{return JSON.parse(localStorage.getItem('mt_orders')||'[]')}catch{return []}
+    return MotoTudoData.read('mt_orders',[])
   }
   function setOrdersV10(v){
     MotoTudoData.write('mt_orders',v);
