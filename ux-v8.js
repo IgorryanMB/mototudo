@@ -136,7 +136,8 @@
             <option value="credito">Cartão de crédito</option>
             <option value="fiado">Fiado</option>
             <option value="outro">Outro</option>
-          </select></div>`:''}
+          </select></div>
+          <div class="form-field full credit-name-wrap-v22" id="batchCreditNameWrapV22" style="display:none"><label>Nome de quem comprou fiado</label><input class="form-control-dark" id="batchCreditNameV22" placeholder="Ex.: João da Silva"></div>`:''}
         </div>
 
         <div class="product-picker-v8">
@@ -239,6 +240,12 @@
     const plateInputV16=document.getElementById('batchPlateV16');
     if(plateInputV16) plateInputV16.oninput=()=>{plateInputV16.value=plateInputV16.value.toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,8);};
     if(isOut&&document.getElementById('laborValueV14')) document.getElementById('laborValueV14').oninput=updateTotal;
+    if(isOut&&document.getElementById('batchPaymentV19')){
+      const paymentSel=document.getElementById('batchPaymentV19');
+      const creditWrap=document.getElementById('batchCreditNameWrapV22');
+      const syncCredit=()=>{if(creditWrap)creditWrap.style.display=paymentSel.value==='fiado'?'':'none';};
+      paymentSel.onchange=syncCredit;syncCredit();
+    }
     document.querySelector('[data-close-action]').onclick=closeModal;
     renderSelected();
     renderResults('');
@@ -260,10 +267,12 @@
       const plate=(document.getElementById('batchPlateV16')?.value||'').trim().toUpperCase();
       const note=document.getElementById('batchNoteV8').value.trim();
       const payment=isOut?(document.getElementById('batchPaymentV19')?.value||'pix'):'';
+      const creditName=isOut?(document.getElementById('batchCreditNameV22')?.value||'').trim():'';
+      if(isOut&&payment==='fiado'&&!creditName){toast('Informe o nome','Digite o nome de quem comprou fiado.','danger');return;}
       const labor=isOut?Number(document.getElementById('laborValueV14')?.value||0):0;
       const date=new Date().toISOString();
       const batch={
-        id:Date.now(),code,type,date,name:name||code,bike,plate,note,payment,labor,
+        id:Date.now(),code,type,date,name:name||code,bike,plate,note,payment,creditName,creditStatus:payment==='fiado'?'open':'',labor,
         status:isOut?(asPending?'pending':'completed'):'completed',
         items:[]
       };
