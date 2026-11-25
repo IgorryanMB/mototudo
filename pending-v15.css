@@ -1,0 +1,41 @@
+
+/* Pedidos pendentes v15 */
+.btn-pending-v15{
+  height:40px;border-radius:10px;padding:0 14px;
+  border:1px solid #5e4e12;background:rgba(246,200,0,.09);
+  color:var(--gold);font-size:10px;font-weight:800;
+}
+.btn-pending-v15:hover{background:rgba(246,200,0,.15);border-color:#7a6417}
+.badge-pending-v15{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 8px;border-radius:999px;
+  background:rgba(246,200,0,.11);
+  color:var(--gold);border:1px solid #554714;
+  font-size:8px;font-weight:800;
+}
+.finish-pending-v15{
+  margin-left:auto;
+  background:rgba(43,210,138,.08)!important;
+  border-color:rgba(43,210,138,.28)!important;
+  color:var(--green)!important;
+}
+.finish-pending-v15:hover{background:rgba(43,210,138,.14)!important}
+.detail-pending-v15{
+  display:inline-block;margin-top:5px;padding:3px 6px;border-radius:999px;
+  background:rgba(246,200,0,.11);color:var(--gold);
+  font-size:7px;font-weight:800;
+}
+.pending-confirm-v15{display:flex;gap:13px;align-items:flex-start}
+.pending-confirm-v15>span{
+  width:42px;height:42px;border-radius:11px;
+  display:grid;place-items:center;
+  background:rgba(43,210,138,.1);color:var(--green);font-size:19px;flex:0 0 auto;
+}
+.pending-confirm-v15 strong{display:block;font-size:12px}
+.pending-confirm-v15 p{margin:5px 0 8px;color:#858d99;font-size:9px;line-height:1.5}
+.pending-confirm-v15 b{font-size:10px;color:var(--gold)}
+@media(max-width:560px){
+  .order-card-v9-actions{grid-template-columns:1fr 1fr}
+  .finish-pending-v15{grid-column:1/-1;margin:0}
+  .modal-actions .btn-pending-v15{order:-1}
+}
