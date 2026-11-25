@@ -127,7 +127,8 @@
           <div class="form-field"><label>${isOut?'Número do pedido':'Número da entrada'}</label><input class="form-control-dark" value="${code}" readonly></div>
           <div class="form-field"><label>Nome / apelido</label><input class="form-control-dark" id="batchNameV8" placeholder="${isOut?'Ex.: Revisão CG do João':'Ex.: Reposição Motul 25/11'}"></div>
           <div class="form-field"><label>Moto</label><input class="form-control-dark" id="batchBikeV8" placeholder="Ex.: CG 160 2023"></div>
-          <div class="form-field"><label>${isOut?'Cliente / referência':'Fornecedor / referência'}</label><input class="form-control-dark" id="batchNoteV8" placeholder="${isOut?'Ex.: João, oficina...':'Ex.: fornecedor ou NF...'}"></div>
+          <div class="form-field"><label>Placa</label><input class="form-control-dark plate-input-v16" id="batchPlateV16" maxlength="8" placeholder="Ex.: ABC1D23"></div>
+          <div class="form-field full"><label>${isOut?'Cliente / referência':'Fornecedor / referência'}</label><input class="form-control-dark" id="batchNoteV8" placeholder="${isOut?'Ex.: João, oficina...':'Ex.: fornecedor ou NF...'}"></div>
         </div>
 
         <div class="product-picker-v8">
@@ -227,6 +228,8 @@
 
     search.oninput=()=>renderResults(search.value);
     search.onfocus=()=>renderResults(search.value);
+    const plateInputV16=document.getElementById('batchPlateV16');
+    if(plateInputV16) plateInputV16.oninput=()=>{plateInputV16.value=plateInputV16.value.toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,8);};
     if(isOut&&document.getElementById('laborValueV14')) document.getElementById('laborValueV14').oninput=updateTotal;
     document.querySelector('[data-close-action]').onclick=closeModal;
     renderSelected();
@@ -246,11 +249,12 @@
 
       const name=(document.getElementById('batchNameV8')?.value||'').trim();
       const bike=(document.getElementById('batchBikeV8')?.value||'').trim();
+      const plate=(document.getElementById('batchPlateV16')?.value||'').trim().toUpperCase();
       const note=document.getElementById('batchNoteV8').value.trim();
       const labor=isOut?Number(document.getElementById('laborValueV14')?.value||0):0;
       const date=new Date().toISOString();
       const batch={
-        id:Date.now(),code,type,date,name:name||code,bike,note,labor,
+        id:Date.now(),code,type,date,name:name||code,bike,plate,note,labor,
         status:isOut?(asPending?'pending':'completed'):'completed',
         items:[]
       };
