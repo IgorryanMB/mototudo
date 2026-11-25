@@ -142,6 +142,11 @@
         <div class="selected-head-v8"><span>Itens adicionados</span><b id="selectedCountV8">0</b></div>
         <div id="selectedProductsV8" class="selected-products-v8"></div>
 
+        ${isOut?`<div class="labor-box-v14">
+          <div class="labor-icon-v14"><i class="bi bi-wrench-adjustable-circle"></i></div>
+          <div class="labor-copy-v14"><strong>Mão de obra</strong><small>Valor do serviço realizado</small></div>
+          <div class="labor-input-v14"><span>R$</span><input id="laborValueV14" type="number" min="0" step="0.01" value="0"></div>
+        </div>`:''}
         <div class="order-summary"><span>${isOut?'Total do pedido':'Total da entrada'}</span><strong id="movementTotalV8">R$ 0,00</strong></div>
       </div>`,
       `<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="saveMovementV8">${isOut?'Finalizar pedido e dar baixa':'Registrar reposição'}</button>`,
@@ -185,8 +190,9 @@
       search.focus();
     }
     function updateTotal(){
-      const total=selected.reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0);
-      document.getElementById('movementTotalV8').textContent=money(total);
+      const itemsTotal=selected.reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0);
+      const labor=isOut?Number(document.getElementById('laborValueV14')?.value||0):0;
+      document.getElementById('movementTotalV8').textContent=money(itemsTotal+labor);
     }
     function renderSelected(){
       count.textContent=selected.length;
@@ -221,6 +227,7 @@
 
     search.oninput=()=>renderResults(search.value);
     search.onfocus=()=>renderResults(search.value);
+    if(isOut&&document.getElementById('laborValueV14')) document.getElementById('laborValueV14').oninput=updateTotal;
     document.querySelector('[data-close-action]').onclick=closeModal;
     renderSelected();
     renderResults('');
@@ -239,8 +246,9 @@
       const name=(document.getElementById('batchNameV8')?.value||'').trim();
       const bike=(document.getElementById('batchBikeV8')?.value||'').trim();
       const note=document.getElementById('batchNoteV8').value.trim();
+      const labor=isOut?Number(document.getElementById('laborValueV14')?.value||0):0;
       const date=new Date().toISOString();
-      const batch={id:Date.now(),code,type,date,name:name||code,bike,note,items:[]};
+      const batch={id:Date.now(),code,type,date,name:name||code,bike,note,labor,items:[]};
 
       selected.forEach((i,k)=>{
         const p=products.find(x=>x.id===i.productId);
