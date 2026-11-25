@@ -1,0 +1,41 @@
+
+/* Pagamentos + filtros Movimentações v19 */
+.movement-filters-v19{
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+  margin:0 0 10px;flex-wrap:wrap;
+}
+.movement-status-tabs-v19{display:flex;gap:7px;flex-wrap:wrap}
+.movement-status-tabs-v19 button,
+.movement-date-v19 button{
+  height:34px;padding:0 11px;border-radius:9px;
+  border:1px solid #2b3038;background:#15181d;color:#aeb5c0;
+  font-size:9px;font-weight:800;
+}
+.movement-status-tabs-v19 button.active{
+  background:rgba(246,200,0,.11);border-color:#655710;color:var(--gold)
+}
+.movement-date-v19{display:flex;align-items:center;gap:8px}
+.movement-date-v19>i{color:#777f8b}
+.movement-date-v19 input{height:36px;width:160px;padding:0 9px}
+.payment-chip-v19{
+  display:inline-flex;align-items:center;gap:4px;margin-left:4px;
+  padding:3px 6px;border-radius:999px;background:rgba(84,154,255,.08);
+  color:#a9c9ff;border:1px solid rgba(84,154,255,.18);font-size:7px;font-weight:800;
+}
+.finance-payment-v19{color:#a9c9ff}
+.detail-payment-v19 span,.detail-payment-v19 strong{display:block}
+.detail-payment-v19 span{font-size:8px;color:#747d89;text-transform:uppercase;letter-spacing:.07em}
+.detail-payment-v19 strong{font-size:10px;margin-top:5px}
+@media(max-width:720px){
+  .movement-filters-v19{align-items:stretch}
+  .movement-status-tabs-v19{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+  .movement-status-tabs-v19 button{width:100%;padding:0 6px}
+  .movement-date-v19{display:grid;grid-template-columns:auto 1fr auto;width:100%}
+  .movement-date-v19 input{width:100%;font-size:16px}
+}
+@media(max-width:480px){
+  .movement-status-tabs-v19{grid-template-columns:1fr}
+  .movement-date-v19{grid-template-columns:1fr}
+  .movement-date-v19>i{display:none}
+  .movement-date-v19 button{width:100%}
+}
