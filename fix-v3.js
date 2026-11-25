@@ -122,7 +122,7 @@
         <div class="form-field full"><div class="order-summary"><span>${isOut?'Total do pedido':'Total da entrada'}</span><strong id="movementTotal">R$ 0,00</strong></div></div>
       </div></form>`,
       `<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="saveMovement">${isOut?'Finalizar pedido e dar baixa':'Registrar reposição'}</button>`,
-      true
+      false
     );
 
     const wrap=document.getElementById('movementItems');
