@@ -42,12 +42,12 @@
 
           <div class="order-list-v9" id="orderListV11">
             ${batches.length?batches.map(o=>`
-              <article class="order-card-v9" data-order-search="${esc([o.name||o.code,o.code,o.note,...(o.items||[]).map(i=>i.product)].join(' ').toLowerCase())}">
+              <article class="order-card-v9" data-order-search="${esc([o.name||o.code,o.code,o.bike,o.note,...(o.items||[]).map(i=>i.product)].join(' ').toLowerCase())}">
                 <div class="order-card-v9-main">
                   <span class="order-icon ${o.type==='out'?'out':'in'}"><i class="bi ${o.type==='out'?'bi-receipt-cutoff':'bi-box-arrow-in-down'}"></i></span>
                   <div class="order-card-v9-info">
                     <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong><span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span></div>
-                    <small><span class="code">${esc(o.code||'Sem código')}</span> • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
+                    <small><span class="code">${esc(o.code||'Sem código')}</span>${o.bike?' • '+esc(o.bike):''} • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
                     ${o.updatedAt?`<em>Última alteração: ${fmtDate(o.updatedAt)}</em>`:''}
                   </div>
                   <div class="order-card-v9-total"><span>Total</span><strong>${money(totalV10(o))}</strong></div>
@@ -98,7 +98,7 @@
       `<div class="order-detail-v9">
         <div class="order-detail-meta-v9">
           <div><span>Nome</span><strong>${esc(o.name||o.code||'Sem nome')}</strong></div>
-          <div><span>Número</span><strong>${esc(o.code||'Sem código')}</strong></div>
+          <div><span>Moto</span><strong>${esc(o.bike||'Não informada')}</strong></div>
           <div><span>Referência</span><strong>${esc(o.note||'Sem referência')}</strong></div>
           <div><span>Total</span><strong class="order-detail-total-v9">${money(totalV10(o))}</strong></div>
         </div>
@@ -138,7 +138,8 @@
 
         <div class="movement-meta">
           <div class="form-field"><label>Nome / apelido do pedido</label><input class="form-control-dark" id="editOrderNameV11" value="${esc(o.name||o.code||'')}"></div>
-          <div class="form-field"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
+          <div class="form-field"><label>Moto</label><input class="form-control-dark" id="editOrderBikeV11" value="${esc(o.bike||'')}" placeholder="Ex.: CG 160 2023"></div>
+          <div class="form-field full"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
         </div>
 
         <div class="product-picker-v8">
@@ -284,6 +285,7 @@
         addedAt:i.addedAt||now
       }));
       o.name=(document.getElementById('editOrderNameV11')?.value||'').trim()||o.code;
+      o.bike=(document.getElementById('editOrderBikeV11')?.value||'').trim();
       o.note=document.getElementById('editOrderNoteV10').value.trim();
       o.updatedAt=now;
 
