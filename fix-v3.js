@@ -17,7 +17,7 @@
 
   window.productTable = function(list){
     if(!list.length)return '<div class="empty-state"><i class="bi bi-search"></i><strong>Nenhum produto encontrado</strong><span>Tente alterar a busca ou os filtros.</span></div>';
-    return `<table class="table inventory-table align-middle"><thead><tr><th>Produto</th><th>Código</th><th>Aplicação</th><th>Local</th><th>Estoque</th><th>Venda</th><th>Status</th><th>Mov.</th></tr></thead><tbody>${list.map(p=>{
+    return `<table class="table inventory-table product-stock-table align-middle"><thead><tr><th>Produto</th><th>Código</th><th>Aplicação</th><th>Local</th><th>Estoque</th><th>Venda</th><th>Status</th><th>Mov.</th></tr></thead><tbody>${list.map(p=>{
       const [cls,label]=getStatus(p);
       return `<tr>
         <td><div class="product-cell"><span class="product-icon"><i class="bi ${catIcon(p.category)}"></i></span><div><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></div></div></td>
@@ -90,7 +90,7 @@
 
         <article class="panel page-panel">
           <div class="panel-header compact"><div><span class="section-kicker">HISTÓRICO DETALHADO</span><h2>Itens movimentados</h2></div></div>
-          <div class="table-responsive"><table class="table inventory-table">
+          <div class="table-responsive"><table class="table inventory-table movement-history-table">
             <thead><tr><th>Data</th><th>Pedido / lote</th><th>Tipo</th><th>Produto</th><th>Qtd.</th><th>Localização</th><th>Valor unit.</th></tr></thead>
             <tbody>${rows.map(m=>`<tr>
               <td>${fmtDate(m.date)}</td>
