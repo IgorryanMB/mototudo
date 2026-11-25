@@ -35,14 +35,19 @@
             </div>
           </div>
 
-          <div class="order-list-v9">
+          <div class="order-search-v11">
+            <i class="bi bi-search"></i>
+            <input id="orderSearchV11" placeholder="Pesquisar por nome, número, cliente, referência ou produto...">
+          </div>
+
+          <div class="order-list-v9" id="orderListV11">
             ${batches.length?batches.map(o=>`
-              <article class="order-card-v9">
+              <article class="order-card-v9" data-order-search="${esc([o.name||o.code,o.code,o.note,...(o.items||[]).map(i=>i.product)].join(' ').toLowerCase())}">
                 <div class="order-card-v9-main">
                   <span class="order-icon ${o.type==='out'?'out':'in'}"><i class="bi ${o.type==='out'?'bi-receipt-cutoff':'bi-box-arrow-in-down'}"></i></span>
                   <div class="order-card-v9-info">
-                    <div class="order-title"><strong>${esc(o.code||'Sem código')}</strong><span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span></div>
-                    <small>${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
+                    <div class="order-title"><strong>${esc(o.name||o.code||'Sem nome')}</strong><span class="badge-soft ${o.type==='out'?'red':'green'}">${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</span></div>
+                    <small><span class="code">${esc(o.code||'Sem código')}</span> • ${fmtDate(o.date)} • ${(o.items||[]).length} item(ns) • ${unitsV10(o)} un.${o.note?' • '+esc(o.note):''}</small>
                     ${o.updatedAt?`<em>Última alteração: ${fmtDate(o.updatedAt)}</em>`:''}
                   </div>
                   <div class="order-card-v9-total"><span>Total</span><strong>${money(totalV10(o))}</strong></div>
@@ -74,6 +79,15 @@
     document.getElementById('mvInv').onclick=()=>openInventoryModal();
     document.querySelectorAll('[data-view-v10]').forEach(b=>b.onclick=()=>openViewV10(Number(b.dataset.viewV10)));
     document.querySelectorAll('[data-edit-v10]').forEach(b=>b.onclick=()=>openEditV10(Number(b.dataset.editV10)));
+    const orderSearch=document.getElementById('orderSearchV11');
+    if(orderSearch){
+      orderSearch.oninput=()=>{
+        const q=normV10(orderSearch.value);
+        document.querySelectorAll('#orderListV11 .order-card-v9').forEach(card=>{
+          card.style.display=!q||normV10(card.dataset.orderSearch).includes(q)?'':'none';
+        });
+      };
+    }
   };
 
   function openViewV10(id){
@@ -83,8 +97,8 @@
       (o.type==='out'?'Pedido ':'Entrada ')+(o.code||''),
       `<div class="order-detail-v9">
         <div class="order-detail-meta-v9">
-          <div><span>Tipo</span><strong>${o.type==='out'?'Venda / Saída':'Entrada / Reposição'}</strong></div>
-          <div><span>Data</span><strong>${fmtDate(o.date)}</strong></div>
+          <div><span>Nome</span><strong>${esc(o.name||o.code||'Sem nome')}</strong></div>
+          <div><span>Número</span><strong>${esc(o.code||'Sem código')}</strong></div>
           <div><span>Referência</span><strong>${esc(o.note||'Sem referência')}</strong></div>
           <div><span>Total</span><strong class="order-detail-total-v9">${money(totalV10(o))}</strong></div>
         </div>
@@ -122,7 +136,10 @@
           <div><strong>${esc(o.code)}</strong><small>Você pode alterar quantidades, remover itens ou adicionar novos.</small></div>
         </div>
 
-        <div class="form-field"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
+        <div class="movement-meta">
+          <div class="form-field"><label>Nome / apelido do pedido</label><input class="form-control-dark" id="editOrderNameV11" value="${esc(o.name||o.code||'')}"></div>
+          <div class="form-field"><label>Cliente / referência</label><input class="form-control-dark" id="editOrderNoteV10" value="${esc(o.note||'')}"></div>
+        </div>
 
         <div class="product-picker-v8">
           <label>Adicionar outro produto</label>
@@ -266,6 +283,7 @@
         location:isOut?(products.find(p=>p.id===Number(i.productId))?.location||''):String(i.location||'').trim(),
         addedAt:i.addedAt||now
       }));
+      o.name=(document.getElementById('editOrderNameV11')?.value||'').trim()||o.code;
       o.note=document.getElementById('editOrderNoteV10').value.trim();
       o.updatedAt=now;
 
