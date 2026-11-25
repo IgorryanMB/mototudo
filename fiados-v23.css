@@ -45,3 +45,34 @@
   .credit-order-actions-v22{display:grid;grid-template-columns:1fr}
   .credit-order-actions-v22 button,.credit-paid-badge-v23{width:100%;justify-content:center}
 }
+
+.credit-client-pay-v23{
+  height:36px;padding:0 11px;border-radius:9px;
+  border:1px solid rgba(246,200,0,.24);
+  background:rgba(246,200,0,.08);color:var(--gold);
+  font-size:8px;font-weight:800;
+}
+.credit-select-sale-v23{display:grid;gap:10px}
+.credit-selected-sale-v23{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+}
+.credit-selected-sale-v23>div{
+  padding:10px;border:1px solid #262b33;border-radius:9px;background:#0e1014;
+}
+.credit-selected-sale-v23 span,.credit-selected-sale-v23 b{display:block}
+.credit-selected-sale-v23 span{font-size:7px;color:#747d89;text-transform:uppercase}
+.credit-selected-sale-v23 b{font-size:10px;margin-top:4px}
+.credit-pay-mode-v23{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;
+}
+.credit-pay-mode-v23 button{
+  height:38px;border-radius:9px;border:1px solid #2d323a;
+  background:#15181d;color:#aeb5c0;font-size:9px;font-weight:800;
+}
+.credit-pay-mode-v23 button.active{
+  border-color:#655710;background:rgba(246,200,0,.11);color:var(--gold);
+}
+@media(max-width:560px){
+  .credit-client-pay-v23{grid-column:1/-1;width:100%}
+  .credit-selected-sale-v23{grid-template-columns:1fr}
+}
