@@ -149,7 +149,7 @@
         </div>`:''}
         <div class="order-summary"><span>${isOut?'Total do pedido':'Total da entrada'}</span><strong id="movementTotalV8">R$ 0,00</strong></div>
       </div>`,
-      `<button class="btn-dark-soft" data-close-action>Cancelar</button><button class="btn-gold" id="saveMovementV8">${isOut?'Finalizar pedido e dar baixa':'Registrar reposição'}</button>`,
+      `<button class="btn-dark-soft" data-close-action>Cancelar</button>${isOut?'<button class="btn-pending-v15" id="savePendingV15"><i class="bi bi-clock-history"></i> Salvar pendente</button>':''}<button class="btn-gold" id="saveMovementV8">${isOut?'Finalizar pedido e dar baixa':'Registrar reposição'}</button>`,
       false
     );
 
@@ -234,11 +234,12 @@
 
     if(productId)addProduct(productId);
 
-    document.getElementById('saveMovementV8').onclick=()=>{
+    function saveMovementV15(asPending=false){
       if(!selected.length){toast('Adicione produtos','Escolha pelo menos um produto.','danger');return;}
       if(selected.some(i=>!i.qty||i.qty<1||Number.isNaN(i.unit))){toast('Confira os itens','Quantidade e valor precisam ser válidos.','danger');return;}
       if(!isOut&&selected.some(i=>!String(i.location||'').trim())){toast('Informe a localização','Diga onde cada peça foi guardada.','danger');return;}
-      if(isOut){
+
+      if(isOut&&!asPending){
         const lack=selected.find(i=>i.qty>(products.find(p=>p.id===i.productId)?.stock||0));
         if(lack){const p=products.find(x=>x.id===lack.productId);toast('Estoque insuficiente',p.name+': só há '+p.stock+' un.','danger');return;}
       }
@@ -248,25 +249,41 @@
       const note=document.getElementById('batchNoteV8').value.trim();
       const labor=isOut?Number(document.getElementById('laborValueV14')?.value||0):0;
       const date=new Date().toISOString();
-      const batch={id:Date.now(),code,type,date,name:name||code,bike,note,labor,items:[]};
+      const batch={
+        id:Date.now(),code,type,date,name:name||code,bike,note,labor,
+        status:isOut?(asPending?'pending':'completed'):'completed',
+        items:[]
+      };
 
       selected.forEach((i,k)=>{
         const p=products.find(x=>x.id===i.productId);
-        p.stock+=isOut?-Number(i.qty):Number(i.qty);
-        if(!isOut)p.location=String(i.location).trim();
         const finalLoc=isOut?(p.location||''):String(i.location).trim();
         batch.items.push({productId:p.id,product:p.name,qty:Number(i.qty),unit:Number(i.unit),location:finalLoc});
-        movements.unshift({
-          id:Date.now()+k,orderId:batch.id,orderCode:code,type,
-          productId:p.id,product:p.name,qty:Number(i.qty),unit:Number(i.unit),
-          location:finalLoc,date,note:note||(isOut?'Venda / pedido':'Reposição')
-        });
+
+        if(!asPending){
+          p.stock+=isOut?-Number(i.qty):Number(i.qty);
+          if(!isOut)p.location=String(i.location).trim();
+
+          movements.unshift({
+            id:Date.now()+k,orderId:batch.id,orderCode:code,type,
+            productId:p.id,product:p.name,qty:Number(i.qty),unit:Number(i.unit),
+            location:finalLoc,date,note:note||(isOut?'Venda / pedido':'Reposição')
+          });
+        }
       });
 
       const batches=getBatchesV8();batches.unshift(batch);saveBatchesV8(batches);
       persist();closeModal();render();
-      toast(isOut?'Pedido finalizado':'Reposição registrada',code+' salvo com '+selected.length+' produto(s).','success');
-    };
+
+      if(asPending){
+        toast('Pedido salvo como pendente',code+' ficou aguardando finalização.','success');
+      }else{
+        toast(isOut?'Pedido finalizado':'Reposição registrada',code+' salvo com '+selected.length+' produto(s).','success');
+      }
+    }
+
+    document.getElementById('saveMovementV8').onclick=()=>saveMovementV15(false);
+    if(isOut&&document.getElementById('savePendingV15')) document.getElementById('savePendingV15').onclick=()=>saveMovementV15(true);
   };
 
   try{render();}catch(e){console.error('Moto Tudo v8:',e);}
