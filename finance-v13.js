@@ -170,13 +170,26 @@
           <div class="panel-header compact">
             <div><span class="section-kicker">PEDIDOS</span><h2 id="financeTitleV13">Todos os pedidos vendidos</h2></div>
           </div>
+          <div class="finance-search-v17">
+            <i class="bi bi-search"></i>
+            <input id="financeSearchV17" placeholder="Pesquisar por nome, número, moto, placa ou cliente...">
+          </div>
           <div class="finance-order-list-v13" id="financeOrdersV13"></div>
         </article>
       </section>`;
 
     const input=document.getElementById('financeDateV13');
+    const searchInput=document.getElementById('financeSearchV17');
+    let currentMode='all';
+    let currentValue='';
+
+    function normalizeFinanceV17(s){
+      return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    }
 
     function apply(mode,value=''){
+      currentMode=mode;
+      currentValue=value;
       document.querySelectorAll('[data-finance-mode-v13]').forEach(b=>b.classList.toggle('active',b.dataset.financeModeV13===mode));
       document.querySelectorAll('[data-finance-date-v13]').forEach(b=>b.classList.toggle('active',b.dataset.financeDateV13===value));
 
@@ -193,6 +206,14 @@
         input.value=value;
       }else{
         input.value='';
+      }
+
+      const q=normalizeFinanceV17(searchInput?.value||'');
+      if(q){
+        list=list.filter(o=>normalizeFinanceV17([
+          o.name,o.code,o.bike,o.plate,o.note,
+          ...(o.items||[]).map(i=>i.product)
+        ].join(' ')).includes(q));
       }
 
       const revenue=list.reduce((s,o)=>s+orderRevenueV13(o),0);
@@ -217,6 +238,7 @@
     document.querySelectorAll('[data-finance-mode-v13]').forEach(b=>b.onclick=()=>apply(b.dataset.financeModeV13));
     document.querySelectorAll('[data-finance-date-v13]').forEach(b=>b.onclick=()=>apply('date',b.dataset.financeDateV13));
     input.onchange=()=>input.value?apply('date',input.value):apply('all');
+    if(searchInput) searchInput.oninput=()=>apply(currentMode,currentValue);
     apply('all');
   };
 
