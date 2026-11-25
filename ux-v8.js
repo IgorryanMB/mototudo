@@ -128,7 +128,15 @@
           <div class="form-field"><label>Nome / apelido</label><input class="form-control-dark" id="batchNameV8" placeholder="${isOut?'Ex.: Revisão CG do João':'Ex.: Reposição Motul 25/11'}"></div>
           <div class="form-field"><label>Moto</label><input class="form-control-dark" id="batchBikeV8" placeholder="Ex.: CG 160 2023"></div>
           <div class="form-field"><label>Placa</label><input class="form-control-dark plate-input-v16" id="batchPlateV16" maxlength="8" placeholder="Ex.: ABC1D23"></div>
-          <div class="form-field full"><label>${isOut?'Cliente / referência':'Fornecedor / referência'}</label><input class="form-control-dark" id="batchNoteV8" placeholder="${isOut?'Ex.: João, oficina...':'Ex.: fornecedor ou NF...'}"></div>
+          <div class="form-field"><label>${isOut?'Cliente / referência':'Fornecedor / referência'}</label><input class="form-control-dark" id="batchNoteV8" placeholder="${isOut?'Ex.: João, oficina...':'Ex.: fornecedor ou NF...'}"></div>
+          ${isOut?`<div class="form-field"><label>Forma de pagamento</label><select class="form-select-dark" id="batchPaymentV19">
+            <option value="pix">Pix</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="debito">Cartão de débito</option>
+            <option value="credito">Cartão de crédito</option>
+            <option value="fiado">Fiado</option>
+            <option value="outro">Outro</option>
+          </select></div>`:''}
         </div>
 
         <div class="product-picker-v8">
@@ -251,10 +259,11 @@
       const bike=(document.getElementById('batchBikeV8')?.value||'').trim();
       const plate=(document.getElementById('batchPlateV16')?.value||'').trim().toUpperCase();
       const note=document.getElementById('batchNoteV8').value.trim();
+      const payment=isOut?(document.getElementById('batchPaymentV19')?.value||'pix'):'';
       const labor=isOut?Number(document.getElementById('laborValueV14')?.value||0):0;
       const date=new Date().toISOString();
       const batch={
-        id:Date.now(),code,type,date,name:name||code,bike,plate,note,labor,
+        id:Date.now(),code,type,date,name:name||code,bike,plate,note,payment,labor,
         status:isOut?(asPending?'pending':'completed'):'completed',
         items:[]
       };
