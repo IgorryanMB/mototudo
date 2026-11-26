@@ -7,7 +7,7 @@
     MotoTudoData.write('mt_orders',v);
     try{orders=v}catch(e){}
   }
-  function totalV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.unit||0),0)+Number(o.labor||0)}
+  function totalV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.invoiceLineTotal??(Number(i.qty||0)*Number(i.unit||0))),0)+Number(o.labor||0)}
   function unitsV10(o){return (o.items||[]).reduce((s,i)=>s+Number(i.qty||0),0)}
   function normV10(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
 
@@ -125,7 +125,7 @@
             <div class="order-detail-product-v9"><strong>${esc(i.product)}</strong><small>${esc(i.location||'Sem localização')}</small></div>
             <div><span>Qtd.</span><b>${i.qty}</b></div>
             <div><span>Unit.</span><b>${money(i.unit)}</b></div>
-            <div><span>Subtotal</span><b>${money(Number(i.qty)*Number(i.unit))}</b></div>
+            <div><span>Subtotal</span><b>${money(i.invoiceLineTotal??(Number(i.qty)*Number(i.unit)))}</b></div>
           </article>`).join('')}</div>
       </div>`,
       `<button class="btn-dark-soft" data-close-action>Fechar</button><button class="btn-gold" id="editFromViewV10"><i class="bi bi-pencil"></i> Editar pedido</button>`,
