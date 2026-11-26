@@ -4,6 +4,12 @@ const N=MotoTudoNF,D=MotoTudoData, K={p:'mt_products',m:'mt_movements',s:'mt_sup
 const keys=Object.values(K);
 function assertCurrent(){const raw=D.rawSnapshot([K.p,K.m,K.s,K.cfg]);for(const [k,v] of [[K.p,products],[K.m,movements],[K.s,suppliers],[K.cfg,settings]]){if(raw[k]!==null&&JSON.stringify(D.read(k,Array.isArray(v)?[]:{}))!==JSON.stringify(v))throw Error('Dados atualizados em outra aba. Recarregue a página antes de continuar.');}}
 const copy=x=>JSON.parse(JSON.stringify(x));
+function matchInvoiceItem(ps,cnpj,supplier,item){
+ const exact=ps.filter(p=>(Array.isArray(p.nfCodes)&&p.nfCodes.some(x=>x.cnpj===cnpj&&String(x.code)===String(item.code)))||(supplier&&Number(p.supplierId)===Number(supplier.id)&&String(p.code)===String(item.code)));
+ if(exact.length===1)return {target:String(exact[0].id),product:exact[0],ambiguous:false};
+ const possible=ps.filter(p=>String(p.code)===String(item.code)||N.norm(p.name)===N.norm(item.name)||(item.ean&&/^\d{8,14}$/.test(item.ean)&&String(p.ean||p.barcode||'')===item.ean));
+ return {target:exact.length||possible.length?'':'NOVO',product:null,ambiguous:!!(exact.length||possible.length)};
+}
 function resolveProduct(ps,ref){const t=String(ref??'').trim();if(!t||t==='NOVO')return null;const exact=ps.filter(p=>String(p.id)===t);if(exact.length===1)return exact[0];const hits=ps.filter(p=>String(p.code)===t||N.norm(p.name)===N.norm(t));return hits.length===1?hits[0]:null}
 const get=k=>D.read(k,[]);
 const $=id=>document.getElementById(id);
@@ -55,12 +61,12 @@ async function nextFile(){
   if(get(K.n).some(x=>x.key===n.key))throw Error('Esta chave NF-e já consta no histórico. Não é possível importar novamente.');
   const cnpj=n.key.slice(6,20);
   const sup=suppliers.find(s=>N.digits(s.cnpj)===cnpj);
-  const candidates=products;
   const rows=n.lines.map(i=>{
-   const matches=candidates.filter(p=>Array.isArray(p.nfCodes)&&p.nfCodes.some(c=>c.cnpj===cnpj&&String(c.code)===i.code)||sup&&Number(p.supplierId)===Number(sup.id)&&String(p.code)===i.code);
-   return {item:i,target:matches.length===1?String(matches[0].id):'',factor:matches.length===1?(matches[0].nfCodes?.find(c=>c.cnpj===cnpj&&String(c.code)===i.code)?.factor??N.multiplier(i)):N.multiplier(i),category:categoryFor(i.name),name:i.name,margin:''};
+   const m=matchInvoiceItem(products,cnpj,sup,i);
+   const link=m.product?.nfCodes?.find(c=>c.cnpj===cnpj&&String(c.code)===i.code);
+   return {item:i,target:m.target,factor:link?.factor??N.multiplier(i),category:categoryFor(i.name),name:i.name,margin:'',ambiguous:m.ambiguous};
   });
-  draft={n,cnpj,supplierId:sup?String(sup.id):'new',supplierName:sup?.name||n.supplier,recipient:settings.nfRecipient||'',extra:0,margin:String(settings.nfDefaultMargin??''),categoryMargins:copy(settings.nfCategoryMargins||{}),verified:false,rows,expected:D.rawSnapshot(keys)};
+  draft={n,cnpj,supplierId:sup?String(sup.id):'new',supplierName:sup?.name||n.supplier,recipient:settings.nfRecipient||n.recipient||'',extra:0,margin:String(settings.nfDefaultMargin??''),categoryMargins:copy(settings.nfCategoryMargins||{}),verified:false,rows,expected:D.rawSnapshot(keys)};
  }catch(e){error=e.message}
  finally{busy=false;if(state.view==='nf-import')showImport()}
 }
@@ -78,51 +84,52 @@ function showImport(){
  const supopts='<option value="new">Cadastrar fornecedor</option>'+suppliers.map(s=>'<option value="'+h(s.id)+'" '+(String(s.id)===d.supplierId?'selected':'')+'>'+h(s.name)+'</option>').join('');
  const defaultMarginFor=r=>{const raw=r.margin!==''?r.margin:(d.categoryMargins[r.category]!==undefined&&d.categoryMargins[r.category]!==''?d.categoryMargins[r.category]:d.margin);const x=Number(raw);return raw!==''&&Number.isFinite(x)&&x>=0&&x<100?x/100:null};
  const productOpts=products.map(p=>'<option value="'+h(p.id)+'">'+h(p.code+' • '+p.name)+'</option>').join('');
+ const hasNew=d.rows.some(r=>r.target==='NOVO');
  const categoriesOpts=c=>categories.map(x=>'<option '+(x.name===c?'selected':'')+'>'+h(x.name)+'</option>').join('');
  body+='<div class="nf-kpis"><div><small>NF-e</small><strong>'+h(n.key.slice(25,34))+'</strong></div><div><small>Itens</small><strong>'+n.lines.length+'</strong></div><div><small>Mercadorias</small><strong>'+amount(n.prodTotal)+'</strong></div><div><small>Total da NF</small><strong>'+amount(n.nfTotal)+'</strong></div></div>';
- body+='<div class="nf-key">'+h(n.key)+' • '+h(n.date||'Data não identificada')+' • '+h(n.source)+'</div>';
- body+='<div class="nf-fields"><label>Fornecedor<select id="nfSupplier" class="form-select-dark">'+supopts+'</select></label><label>Nome do fornecedor (novo)<input class="form-control-dark" id="nfSupplierName" value="'+h(d.supplierName)+'" maxlength="150"></label><label>CNPJ da loja (destinatário)<input class="form-control-dark" id="nfRecipient" value="'+h(d.recipient)+'" placeholder="14 dígitos"></label><label>Frete adicional pago (R$)<input class="form-control-dark" id="nfExtra" type="number" min="0" step=".01" value="'+d.extra+'"></label><label>Margem bruta inicial de novos produtos (%)<input class="form-control-dark" id="nfMargin" type="number" min="0" max="99" step=".1" value="'+h(d.margin)+'" placeholder="Informe uma margem"></label></div>';
+ body+='<div class="nf-key">'+h(n.key)+' • '+h(n.date?n.date.split('-').reverse().join('/'):'Data de emissão não identificada')+' • '+h(n.source)+'</div>';
+ body+='<div class="nf-simple-guide"><strong>Produtos novos já ficam prontos para cadastro.</strong><small>Revise apenas os vínculos duvidosos, as embalagens e a margem de venda dos novos produtos.</small></div><div class="nf-fields"><label>Fornecedor<select id="nfSupplier" class="form-select-dark">'+supopts+'</select></label><label>Nome do fornecedor<input class="form-control-dark" id="nfSupplierName" value="'+h(d.supplierName)+'" maxlength="150" '+(d.supplierId!=='new'?'disabled':'')+'></label><label>CNPJ da loja (destinatário)<input class="form-control-dark" id="nfRecipient" value="'+h(d.recipient)+'" placeholder="14 dígitos" '+(settings.nfRecipient?'readonly':'')+'></label><label>Frete adicional pago (R$)<input class="form-control-dark" id="nfExtra" type="number" min="0" step=".01" value="'+d.extra+'"></label><label>Margem de lucro dos novos produtos (%)<input class="form-control-dark" id="nfMargin" type="number" min="0" max="99" step=".1" value="'+h(d.margin)+'" placeholder="Ex.: 30" '+(hasNew?'required':'')+'></label></div>';
+ if(hasNew)body+='<div class="nf-info nf-margin-help">Informe uma única margem para todos os novos produtos. Ex.: custo R$ 70,00 com margem de 30% = venda R$ 100,00. Produtos existentes conservam sua margem.</div>';
  body+='<details class="nf-margin-details"><summary>Margens padrão por categoria (opcional)</summary><div class="nf-fields">'+categories.map((cat,i)=>'<label>'+h(cat.name)+' (%)<input type="number" min="0" max="99.9" step=".1" class="form-control-dark" data-nf-cat-margin="'+i+'" value="'+h(d.categoryMargins[cat.name]??'')+'" placeholder="Usar margem geral"></label>').join('')+'</div></details>';
  if(n.externalFreightHint)body+='<div class="nf-warn">A nota menciona frete por conta do destinatário. Informe somente o valor efetivamente pago, se não estiver incluído no total.</div>';
  body+='<div class="nf-info">Destinatário lido: '+h(n.recipient||'não identificado')+'. Custo bruto de aquisição calculado pelo total da nota, com ajustes rateados; confira tributos recuperáveis com o contador. Pares e kits são mantidos como unidade de venda; caixas precisam de conversão confirmada.</div>';
- body+='<datalist id="nfProducts">'+productOpts+'</datalist><div class="nf-toolbar">'+btn('nfAllNew','Marcar não vinculados como novos')+btn('nfClear','Desmarcar novos')+'<span id="nfSummary"></span></div>';
+ body+='<datalist id="nfProducts">'+productOpts+'</datalist><div class="nf-toolbar nf-import-tools">'+btn('nfAllNew','Cadastrar novos não ambíguos')+btn('nfClear','Revisar todos')+'<span id="nfSummary"></span></div>';
  let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
- body+=table(['Produto da nota','Unidade / qtd.','Conversão','Vincular / cadastrar','Categoria (novo)','Custo unit.','Estoque e venda'],d.rows.map((r,i)=>{
-  const p=resolveProduct(products,r.target);
-  const fact=r.factor??'';
-  return row(['<strong>'+h(r.item.code)+'</strong><input class="form-control-dark nf-name" data-i="'+i+'" data-f="name" value="'+h(r.name)+'"><small>'+h(r.item.cfop)+' • '+h(r.item.ncm)+' • Pág. '+r.item.page+'</small>',
-  h(r.item.unit)+' × '+r.item.qty,'<input class="form-control-dark nf-factor" data-i="'+i+'" data-f="factor" type="number" min="1" max="10000" step="1" value="'+fact+'"><small data-nf-qty="'+i+'">'+(fact?r.item.qty*fact:'Conferir')+' no estoque</small>',
-  '<input class="form-control-dark nf-target" data-i="'+i+'" data-f="target" list="nfProducts" value="'+h(r.target)+'" placeholder="Código, nome ou NOVO"><small data-nf-match="'+i+'">'+h(p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo')+'</small>',
-  '<select class="form-select-dark nf-category" data-i="'+i+'" data-f="category">'+categoriesOpts(r.category)+'</select>',
-  '<strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong>', '<small data-nf-stock="'+i+'"></small><small data-nf-sale="'+i+'"></small><input class="form-control-dark" data-i="'+i+'" data-f="margin" type="number" min="0" max="99.9" step=".1" value="'+h(r.margin)+'" placeholder="Margem individual %" '+(p?'disabled':'')+'>']);
- }).join(''));
+ body+='<div class="nf-filterbar"><input class="form-control-dark" id="nfSearchItems" placeholder="Buscar produto ou código"><select class="form-select-dark" id="nfItemFilter"><option value="all">Todos os produtos</option><option value="attention">Atenção necessária</option><option value="new">Novos produtos</option><option value="linked">Já cadastrados</option></select></div><div class="nf-item-list">';
+ body+=d.rows.map((r,i)=>{
+  const p=resolveProduct(products,r.target),fact=r.factor??'',needs=(!p&&r.target!=='NOVO')||!fact;
+  const details='<div class="nf-item-fields"><label>Descrição<input class="form-control-dark nf-name" data-i="'+i+'" data-f="name" value="'+h(r.name)+'"></label><label>Destino<select class="form-select-dark" data-i="'+i+'" data-nf-mode><option value="NOVO" '+(r.target==='NOVO'?'selected':'')+'>Cadastrar novo produto</option><option value="link" '+(r.target&&r.target!=='NOVO'?'selected':'')+'>Vincular a produto existente</option><option value="" '+(!r.target?'selected':'')+'>Revisar vínculo</option></select></label><label data-nf-linkbox="'+i+'" '+(r.target==='NOVO'?'hidden':'')+'>Produto existente<input class="form-control-dark nf-target" data-i="'+i+'" data-f="target" list="nfProducts" value="'+h(r.target==='NOVO'?'':r.target)+'" placeholder="Digite código ou nome do produto"></label><label>Unidades por embalagem<input class="form-control-dark nf-factor" data-i="'+i+'" data-f="factor" type="number" min="1" max="10000" step="1" value="'+h(fact)+'"></label><label>Categoria<select class="form-select-dark nf-category" data-i="'+i+'" data-f="category">'+categoriesOpts(r.category)+'</select></label><label>Margem individual (opcional)<input class="form-control-dark" data-i="'+i+'" data-f="margin" type="number" min="0" max="99.9" step=".1" value="'+h(r.margin)+'" placeholder="Usar padrão" '+(p?'disabled':'')+'></label></div>';
+  return '<details class="nf-item" data-nf-card="'+i+'" '+(needs?'open':'')+'><summary><div class="nf-item-heading"><small>'+h(r.item.code)+' • '+h(r.item.unit)+' × '+r.item.qty+'</small><strong>'+h(r.name)+'</strong><span data-nf-match="'+i+'" class="nf-item-status"></span></div><div class="nf-item-values"><small data-nf-qty="'+i+'"></small><strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong><small data-nf-stock="'+i+'"></small><small data-nf-sale="'+i+'"></small></div><i class="bi bi-chevron-down nf-item-arrow"></i></summary>'+details+'</details>';
+ }).join('')+'</div>';
  body+='<label class="nf-check"><input type="checkbox" id="nfVerified" '+(d.verified?'checked':'')+'> Conferi destinatário, autorização da NF-e, recebimento físico, unidades, impostos, produtos e custos. Confirmo que esta mercadoria ainda não foi lançada no estoque.</label>';
  body+='<div class="nf-toolbar">'+btn('nfCancel','Descartar prévia')+btn('nfConfirm','Confirmar entrada',true)+(queue.length?'<small>'+queue.length+' arquivo(s) aguardando</small>':'')+'</div>';
  appView.innerHTML=panel('Conferência de entrada',body);
- $('nfSupplier').value=d.supplierId;$('nfSupplier').onchange=e=>{d.supplierId=e.target.value;const s=suppliers.find(x=>String(x.id)===d.supplierId);if(s){d.supplierName=s.name;d.rows.forEach(r=>{if(!r.target){const matches=products.filter(p=>Number(p.supplierId)===Number(s.id)&&String(p.code)===r.item.code);if(matches.length===1)r.target=String(matches[0].id)}})}d.verified=false;showImport()};
+ $('nfSupplier').value=d.supplierId;$('nfSupplier').onchange=e=>{d.supplierId=e.target.value;const s=suppliers.find(x=>String(x.id)===d.supplierId);if(s){d.supplierName=s.name;d.rows.forEach(r=>{const m=matchInvoiceItem(products,d.cnpj,s,r.item);if(m.product||!r.target||r.target==='NOVO'){r.target=m.target;r.ambiguous=m.ambiguous}})}d.verified=false;showImport()};
  $('nfSupplierName').oninput=e=>{d.supplierName=e.target.value;d.verified=false;$('nfVerified').checked=false};
  $('nfRecipient').oninput=e=>{d.recipient=e.target.value;d.verified=false;$('nfVerified').checked=false};
  $('nfMargin').oninput=e=>{d.margin=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()};
  appView.querySelectorAll('[data-nf-cat-margin]').forEach(el=>el.oninput=e=>{d.categoryMargins[categories[Number(e.target.dataset.nfCatMargin)].name]=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()});
  $('nfExtra').oninput=e=>{d.extra=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()};
  $('nfVerified').onchange=e=>d.verified=e.target.checked;
- appView.querySelectorAll('[data-f]').forEach(el=>el.oninput=e=>{const t=e.target;d.rows[Number(t.dataset.i)][t.dataset.f]=t.value;d.verified=false;$('nfVerified').checked=false;refresh()});
- $('nfAllNew').onclick=()=>{d.rows.forEach(r=>{if(!r.target)r.target='NOVO'});d.verified=false;showImport()};
+ appView.querySelectorAll('[data-f]').forEach(el=>el.oninput=e=>{const t=e.target,r=d.rows[Number(t.dataset.i)];r[t.dataset.f]=t.value;d.verified=false;$('nfVerified').checked=false;refresh()});
+ appView.querySelectorAll('[data-nf-mode]').forEach(el=>el.onchange=e=>{const i=Number(e.target.dataset.i),r=d.rows[i],v=e.target.value;r.target=v==='NOVO'?'NOVO':'';const input=appView.querySelector('[data-i="'+i+'"][data-f="target"]');input.value='';appView.querySelector('[data-nf-linkbox="'+i+'"]').hidden=v==='NOVO';d.verified=false;$('nfVerified').checked=false;refresh();if(v==='link')input.focus()});
+ $('nfSearchItems').oninput=refresh;$('nfItemFilter').onchange=refresh;
+ $('nfAllNew').onclick=()=>{d.rows.forEach(r=>{if(!r.target&&!r.ambiguous)r.target='NOVO'});d.verified=false;showImport()};
  $('nfClear').onclick=()=>{d.rows.forEach(r=>{if(r.target==='NOVO')r.target=''});d.verified=false;showImport()};
  $('nfCancel').onclick=()=>{draft=null;error='';showImport()};
- $('nfConfirm').onclick=()=>{try{confirmEntry()}catch(e){issue(e)}};
+ $('nfConfirm').onclick=()=>{try{confirmEntry()}catch(e){error=e.message;const banner=document.createElement('div');banner.className='nf-error';banner.textContent=error;const old=appView.querySelector('.nf-error');if(old)old.remove();appView.querySelector('.nf-panel .panel-header').after(banner);const row=appView.querySelector('.nf-item[data-needs="true"]');if(row){row.hidden=false;row.open=true;row.scrollIntoView({block:'center',behavior:'smooth'})}else banner.scrollIntoView({block:'center',behavior:'smooth'});toast('Confira a entrada',error,'danger')}};
  refresh();
  function refresh(){
   let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
-  let unresolved=0;d.rows.forEach((r,i)=>{
+  let unresolved=0,newCount=0,linked=0;const q=N.norm($('nfSearchItems').value),filter=$('nfItemFilter').value;d.rows.forEach((r,i)=>{
    const p=resolveProduct(products,r.target),fact=Number(r.factor),qty=r.item.qty*fact;
    const qtyEl=appView.querySelector('[data-nf-qty="'+i+'"]'),match=appView.querySelector('[data-nf-match="'+i+'"]'),cost=appView.querySelector('[data-nf-cost="'+i+'"]');
-   qtyEl.textContent=fact>0?qty+' no estoque':'Conferir';match.textContent=p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo válido';cost.textContent=fact>0?amount(costs[i]/qty):'—';
+   qtyEl.textContent=fact>0?qty+' no estoque':'Conferir';match.textContent=p?'Já cadastrado: '+p.name:r.target==='NOVO'?'Novo produto':'Vínculo a conferir';match.dataset.state=p?'linked':r.target==='NOVO'?'new':'attention';cost.textContent=fact>0?amount(costs[i]/qty):'—';
    const stockEl=appView.querySelector('[data-nf-stock="'+i+'"]'),saleEl=appView.querySelector('[data-nf-sale="'+i+'"]');const marginInput=appView.querySelector('[data-i="'+i+'"][data-f="margin"]');if(marginInput)marginInput.disabled=!!p;
    const prev=Number(p?.lastPurchaseCost??p?.cost),price=Number(p?.price),m=p?(Number.isFinite(p.targetMargin)?p.targetMargin:(prev>0&&price>=prev?1-prev/price:null)):defaultMarginFor(r);const suggest=fact>0?N.suggested(N.round(costs[i]/qty),m):null;
    if(stockEl)stockEl.textContent=p?'Estoque: '+p.stock+' → '+(Number(p.stock)+qty):r.target==='NOVO'?'Estoque inicial: '+qty:'Vínculo pendente';if(saleEl)saleEl.textContent=suggest===null?'Margem a definir':(p?'Venda: '+amount(price)+' → ':'Venda inicial: ')+amount(suggest)+' ('+percent(m)+')';
-   if((!p&&r.target!=='NOVO')||!(fact>=1&&Number.isInteger(fact)))unresolved++;
-  });$('nfSummary').textContent=unresolved+' linha(s) exigem conferência';
+   const need=(!p&&r.target!=='NOVO')||!(fact>=1&&Number.isInteger(fact))||(r.target==='NOVO'&&m===null);if(need)unresolved++;if(p)linked++;if(r.target==='NOVO')newCount++;const card=appView.querySelector('[data-nf-card="'+i+'"]');card.dataset.needs=String(need);card.hidden=!N.norm(r.name+' '+r.item.code).includes(q)||(filter==='attention'&&!need)||(filter==='new'&&r.target!=='NOVO')||(filter==='linked'&&!p);
+  });$('nfSummary').textContent=newCount+' novos • '+linked+' vinculados • '+unresolved+' a conferir';
  }
 }
 function snapshotOrderCosts(os,ps){
