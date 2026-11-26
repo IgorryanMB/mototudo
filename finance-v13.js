@@ -13,7 +13,7 @@
   function orderCostV13(o){
     return (o.items||[]).reduce((s,i)=>{
       const p=products.find(x=>Number(x.id)===Number(i.productId));
-      return s+Number(i.qty||0)*Number(p?.cost||0);
+      return s+Number(i.qty||0)*Number(i.unitCostSnapshot??p?.cost??0);
     },0);
   }
   function orderUnitsV13(o){
