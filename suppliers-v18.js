@@ -104,8 +104,10 @@
         category:d.category,supplierId:Number(d.supplierId),
         stock:Number(d.stock),min:Number(d.min),cost:Number(d.cost),price:Number(d.price),active:true
       };
-      if(product) products=products.map(x=>x.id===product.id?item:x); else products.push(item);
-      persist();closeModal();render();
+      if(product&&window.MotoTudoNFPriceEdit&&(Number(product.cost)!==Number(item.cost)||Number(product.price)!==Number(item.price))){
+        try{window.MotoTudoNFPriceEdit(product,item)}catch(e){toast('Alteração não salva',e.message,'danger');return;}
+      }else{if(product) products=products.map(x=>x.id===product.id?item:x);else products.push(item);persist();}
+      closeModal();render();
       toast(product?'Produto atualizado':'Produto cadastrado',item.name+' foi salvo com fornecedor vinculado.','success');
     };
   };
