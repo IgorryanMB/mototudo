@@ -139,6 +139,7 @@
     const all=getOrdersV10();
     const o=all.find(x=>Number(x.id)===Number(id));
     if(!o)return;
+    if(o.invoiceId){toast('Entrada fiscal protegida','Confira esta entrada em Notas importadas.','danger');return;}
     const isOut=o.type==='out';
     const isPending=isOut&&o.status==='pending';
 
@@ -310,6 +311,8 @@
         product:i.product||products.find(p=>p.id===Number(i.productId))?.name||'Produto',
         qty:Number(i.qty),
         unit:Number(i.unit),
+        unitCostSnapshot:i.unitCostSnapshot??(!isPending&&isOut?Number(products.find(p=>p.id===Number(i.productId))?.cost||0):null),
+        costSnapshotEstimated:i.costSnapshotEstimated??false,
         location:isOut?(products.find(p=>p.id===Number(i.productId))?.location||''):String(i.location||'').trim(),
         addedAt:i.addedAt||now
       }));
@@ -374,6 +377,7 @@
       o.payment=selectedPayment;
       o.creditName=selectedPayment==='fiado'?creditName:'';
       o.creditStatus=selectedPayment==='fiado'?'open':'';
+      for(const i of o.items||[]){const p=products.find(x=>Number(x.id)===Number(i.productId));i.unitCostSnapshot=Number(p?.cost||0);i.costSnapshotEstimated=false;}
       o.status='completed';
       o.completedAt=now;
       o.updatedAt=now;
