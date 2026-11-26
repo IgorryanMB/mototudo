@@ -2,6 +2,7 @@
 'use strict';
 const N=MotoTudoNF,D=MotoTudoData, K={p:'mt_products',m:'mt_movements',s:'mt_suppliers',o:'mt_orders',cfg:'mt_settings',n:'mt_invoices',h:'mt_price_history',r:'mt_price_reviews'};
 const keys=Object.values(K);
+function assertCurrent(){const raw=D.rawSnapshot([K.p,K.m,K.s,K.cfg]);for(const [k,v] of [[K.p,products],[K.m,movements],[K.s,suppliers],[K.cfg,settings]]){if(raw[k]!==null&&JSON.stringify(D.read(k,Array.isArray(v)?[]:{}))!==JSON.stringify(v))throw Error('Dados atualizados em outra aba. Recarregue a página antes de continuar.');}}
 const copy=x=>JSON.parse(JSON.stringify(x));
 function resolveProduct(ps,ref){const t=String(ref??'').trim();if(!t||t==='NOVO')return null;const exact=ps.filter(p=>String(p.id)===t);if(exact.length===1)return exact[0];const hits=ps.filter(p=>String(p.code)===t||N.norm(p.name)===N.norm(t));return hits.length===1?hits[0]:null}
 const get=k=>D.read(k,[]);
@@ -49,7 +50,7 @@ async function nextFile(){
  if(busy||!queue.length)return;
  const f=queue.shift();busy=true;draft=null;error='';if(state.view==='nf-import')showImport();
  try{
-  if(f.size>15000000||f.size<=0)throw Error('Arquivo vazio ou acima de 15 MB.');
+  assertCurrent();if(f.size>15000000||f.size<=0)throw Error('Arquivo vazio ou acima de 15 MB.');
   let n;if(/\.xml$/i.test(f.name))n=N.xml(await f.text());else if(/\.pdf$/i.test(f.name)){const sig=await f.slice(0,5).text();if(sig!=='%PDF-')throw Error('Arquivo PDF inválido.');n=N.pdf(await readPdf(f));}else throw Error('Envie XML ou PDF.');
   if(get(K.n).some(x=>x.key===n.key))throw Error('Esta chave NF-e já consta no histórico. Não é possível importar novamente.');
   const cnpj=n.key.slice(6,20);
@@ -128,7 +129,7 @@ function snapshotOrderCosts(os,ps){
  for(const o of os)if(o.type==='out'&&o.status!=='pending')for(const i of o.items||[])if(i.unitCostSnapshot==null){const p=ps.find(p=>String(p.id)===String(i.productId));if(p){i.unitCostSnapshot=Number(p.cost)||0;i.costSnapshotEstimated=true}}
 }
 function confirmEntry(){
- const d=draft,n=d.n;if(!d.verified)throw Error('Confirme a conferência física e fiscal.');
+ assertCurrent();const d=draft,n=N.validate(d.n);if(n.key.slice(6,20)!==d.cnpj)throw Error('Emitente divergente da chave da nota.');if(!d.verified)throw Error('Confirme a conferência física e fiscal.');
  if(!/^\d{14}$/.test(N.digits(d.recipient))||!n.recipient||N.digits(d.recipient)!==N.digits(n.recipient))throw Error('O CNPJ do destinatário não confere. Use XML se não foi identificado.');
  if(settings.nfRecipient&&N.digits(settings.nfRecipient)!==N.digits(d.recipient))throw Error('O CNPJ não corresponde à loja já configurada.');
  const extra=Number(d.extra);if(!Number.isFinite(extra)||extra<0)throw Error('Frete inválido.');
@@ -208,7 +209,7 @@ function showReviews(){
  const expected=D.rawSnapshot([K.p,K.r,K.h]);
  function decide(apply){
   try{
-   const selected=Array.from(appView.querySelectorAll('[data-nf-review]:checked')).map(e=>e.dataset.nfReview);if(!selected.length)throw Error('Selecione os reajustes.');
+   assertCurrent();const selected=Array.from(appView.querySelectorAll('[data-nf-review]:checked')).map(e=>e.dataset.nfReview);if(!selected.length)throw Error('Selecione os reajustes.');
    const ps=copy(products),rev=get(K.r),hist=get(K.h),now=new Date().toISOString();
    for(const rid of selected){
     const x=rev.find(z=>z.id===rid&&z.status==='pending');if(!x)throw Error('Reajuste desatualizado.');
@@ -245,7 +246,7 @@ function askReverse(n){
  openModal('Estornar entrada fiscal','<div class="nf-warn">O estorno só é permitido se todos os produtos continuarem exatamente como ficaram após esta nota, sem movimentações posteriores, alterações de preço ou novas vendas. O histórico e a chave da nota serão preservados.</div><label class="nf-check"><input type="checkbox" id="nfReverseOk"> Confirmo que esta entrada precisa ser desfeita.</label>',btn('nfReverseCancel','Cancelar')+btn('nfReverseConfirm','Estornar',true));
  $('nfReverseCancel').onclick=closeModal;$('nfReverseConfirm').onclick=()=>{
   try{
-   if(!$('nfReverseOk').checked)throw Error('Confirme o estorno.');
+   assertCurrent();if(!$('nfReverseOk').checked)throw Error('Confirme o estorno.');
    const ps=copy(products),ms=copy(movements),os=copy(D.read(K.o,orders)),notes=get(K.n),hist=get(K.h),rev=get(K.r),now=new Date().toISOString();
    const note=notes.find(x=>x.id===n.id&&x.status==='imported');if(!note)throw Error('Entrada não disponível.');
    const originMoves=ms.filter(m=>m.invoiceId===n.id);if(originMoves.length!==note.lines.length||!os.some(o=>o.id===note.orderId&&o.invoiceId===n.id))throw Error('Movimentos originais foram alterados.');
@@ -273,7 +274,7 @@ function askReverse(n){
  };
 }
 window.MotoTudoNFPriceEdit=function(before,item){
- const expected=D.rawSnapshot([K.p,K.o,K.h,K.r]),ps=copy(products),os=copy(D.read(K.o,orders)),hist=get(K.h),rev=get(K.r),now=new Date().toISOString();
+ assertCurrent();const expected=D.rawSnapshot([K.p,K.o,K.h,K.r]),ps=copy(products),os=copy(D.read(K.o,orders)),hist=get(K.h),rev=get(K.r),now=new Date().toISOString();
  const i=ps.findIndex(p=>p.id===before.id);
  if(i<0||!Number.isFinite(item.cost)||!Number.isFinite(item.price)||item.cost<0||item.price<0)throw Error('Cadastro ou valores inválidos.');
  snapshotOrderCosts(os,ps);
