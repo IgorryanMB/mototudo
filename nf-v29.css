@@ -7,3 +7,27 @@
 .nf-item-heading,.nf-item-values{display:grid;gap:5px;min-width:0}.nf-item-heading strong{font-size:13px;line-height:1.4;overflow-wrap:anywhere}.nf-item-values{text-align:right}.nf-item-values strong{font-size:16px;color:#f2d175}.nf-item-status{font-size:11px;font-weight:650;color:#aeb4bf;overflow-wrap:anywhere}.nf-item-status[data-state=new]{color:#8bdab1}.nf-item-status[data-state=linked]{color:#a6c9ff}.nf-item-status[data-state=attention]{color:#ffb1a9}
 .nf-item[data-needs=true]{border-color:#8a6a37}.nf-item-arrow{color:#8e939e;transition:transform .15s}.nf-item[open] .nf-item-arrow{transform:rotate(180deg)}.nf-item-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border-top:1px solid #34343b;padding:13px}.nf-item-fields label{display:grid;gap:6px;font-size:12px;color:#c8cbd3;min-width:0}.nf-item-fields .nf-name,.nf-item-fields .nf-target,.nf-item-fields .nf-factor,.nf-item-fields .nf-category{width:100%;min-width:0;max-width:none;margin:0}.nf-item-fields label:first-child{grid-column:1/-1}.nf-import-tools #nfSummary{width:100%;font-weight:650;color:#e6d6a1}
 @media(max-width:768px){.nf-item summary{grid-template-columns:minmax(0,1fr) 18px;gap:7px;padding:12px}.nf-item-heading{grid-column:1;grid-row:1}.nf-item-values{grid-column:1;grid-row:2;text-align:left;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;border-top:1px solid #32333a;padding-top:8px}.nf-item-values strong{text-align:right}.nf-item-arrow{grid-column:2;grid-row:1}.nf-item-fields{grid-template-columns:1fr}.nf-filterbar{grid-template-columns:1fr}.nf-simple-guide{font-size:12px}.nf-panel .nf-fields input,.nf-panel .nf-fields select,.nf-item-fields input,.nf-item-fields select{font-size:16px!important}.nf-item-heading strong{font-size:14px}.nf-item-status{font-size:12px}}
+
+.nf-item-comparison{grid-column:1/-1;min-width:0;cursor:default}
+.nf-item-comparison[hidden],.nf-review-card[hidden]{display:none!important}
+.nf-comparison{min-width:0;display:grid;gap:9px;padding:12px 0 0}
+.nf-compare-top{display:flex;gap:8px 16px;flex-wrap:wrap;font-size:12px;font-weight:700;line-height:1.5}
+.nf-neutral{color:#b9bfca}.nf-compare-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.nf-compare-new{grid-template-columns:minmax(0,1fr)}
+.nf-compare-column{min-width:0;padding:11px;border:1px solid #383a43;border-radius:10px;background:#18191d;display:grid;gap:9px;align-content:start}
+.nf-compare-column.keep{background:#212127}.nf-compare-column.suggest{border-color:#79632e;background:#2b271b}
+.nf-compare-title{color:#d5d8df;font-size:12px;line-height:1.35;min-height:28px;display:flex;align-items:center}
+.nf-compare-column.suggest .nf-compare-title{color:#f0cd69}
+.nf-compare-column>div{display:grid;gap:2px;min-width:0}
+.nf-compare-column small,.nf-compare-note{display:block;color:#b4b9c3;font-size:11px;line-height:1.45}
+.nf-compare-column b{font-size:14px;font-variant-numeric:tabular-nums;line-height:1.35;color:#f0f1f4;overflow-wrap:anywhere}
+.nf-compare-column.suggest b{color:#f4d47a}
+.nf-review-list,.nf-popup-comparisons{display:grid;gap:12px;margin:12px 0}
+.nf-review-card{min-width:0;padding:14px;background:#1c1d22;border:1px solid #393a43;border-radius:12px}
+.nf-review-card h4{font-size:14px;line-height:1.4;margin:0;color:#f0f1f4;overflow-wrap:anywhere}
+.nf-review-title{display:flex;align-items:center;gap:10px;font-size:14px;line-height:1.4;cursor:pointer}
+.nf-review-title input{flex:none;width:18px;height:18px;accent-color:#f0c64d}
+.nf-manual-price{display:grid;gap:6px;max-width:240px;margin-top:12px;font-size:12px}
+.nf-popup-comparisons{max-height:48vh;overflow:auto}
+@media(max-width:768px){.nf-compare-grid{gap:5px}.nf-compare-column{padding:8px 6px;gap:8px}.nf-compare-title{font-size:11px;min-height:30px}.nf-compare-column small{font-size:10px}.nf-compare-column b{font-size:12px}.nf-compare-top{font-size:11px;gap:5px 10px}.nf-review-card{padding:10px}.nf-item-comparison{grid-column:1/-1;grid-row:3}.nf-compare-note{font-size:10px}.nf-manual-price input{font-size:16px!important}}
+@media(max-width:350px){.nf-compare-grid{grid-template-columns:1fr}.nf-compare-title{min-height:0}.nf-compare-column{grid-template-columns:repeat(2,minmax(0,1fr))}.nf-compare-title{grid-column:1/-1}}
