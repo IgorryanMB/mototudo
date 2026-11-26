@@ -16,7 +16,7 @@ const amount=v=>money(Number(v)||0);
 const percent=v=>Number.isFinite(v)?(v*100).toFixed(1).replace('.',',')+'%':'—';
 const date=v=>{try{return new Date(v).toLocaleString('pt-BR')}catch{return ''}};
 const pending=()=>get(K.r).filter(r=>r.status==='pending');
-const statusLabel=s=>({pending:'Pendente',accepted:'Aplicado',declined:'Mantido',superseded:'Substituído',created:'Cadastro inicial'})[s]||s;
+const statusLabel=s=>({reversed:'Estornado',pending:'Pendente',accepted:'Aplicado',declined:'Mantido',superseded:'Substituído',created:'Cadastro inicial'})[s]||s;
 const id=()=>crypto.randomUUID();
 let draft=null, queue=[], busy=false, error='';
 function categoryFor(name){
@@ -172,7 +172,7 @@ function confirmEntry(){
   hist.unshift({id:id(),batchId,productId:p.id,name:p.name,date:now,source:'NF-e',oldCost:isNew?null:oldPurchase,newCost:purchase,oldPrice:isNew?null:oldPrice,newPrice:p.price,oldAverage:isNew?null:oldCost,newAverage:p.cost,kind:isNew?'created':'purchase'});
   const movement={id:moveId++,type:'in',productId:p.id,product:p.name,qty,unit:purchase,location:p.location||'',date:now,note:'Entrada NF-e '+n.key.slice(25,34),orderId,orderCode:'NF-'+n.key.slice(6,20)+'-'+n.key.slice(25,34),invoiceId:batchId};
   ms.unshift(movement);items.push({productId:p.id,product:p.name,qty,unit:purchase,unitCostSnapshot:purchase,location:p.location||'',invoiceLineTotal:costs[k]});
-  records.push({code:i.code,name:i.name,qtyFiscal:i.qty,unit:i.unit,factor,qty,productId:p.id,total:i.total,cost:purchase,allocated:costs[k],stockBefore:oldStock,stockAfter:p.stock});
+  records.push({code:i.code,name:i.name,qtyFiscal:i.qty,unit:i.unit,factor,qty,productId:p.id,total:i.total,cost:purchase,allocated:costs[k],stockBefore:oldStock,stockAfter:p.stock,before,after:copy(p)});
  }
  cfg.nfRecipient=N.digits(d.recipient);
  const orderCode='NF-'+n.key.slice(6,20)+'-'+n.key.slice(25,34);
@@ -185,8 +185,8 @@ function confirmEntry(){
 }
 function showChanges(count){
  const r=pending(),up=r.filter(x=>x.newCost>x.oldCost).length,down=r.filter(x=>x.newCost<x.oldCost).length;
- openModal('Alterações de custo detectadas','<div class="nf-kpis"><div><small>Aumentos pendentes</small><strong class="nf-up">'+up+'</strong></div><div><small>Reduções pendentes</small><strong class="nf-down">'+down+'</strong></div></div><p>'+count+' produto(s) desta entrada tiveram mudança de custo. O preço de venda só muda após sua aprovação.</p>'+table(['Produto','Custo anterior','Novo custo','Venda sugerida'],r.slice(0,15).map(x=>row([h(x.name),amount(x.oldCost),amount(x.newCost),x.suggested===null?'Definir margem':amount(x.suggested)])).join('')),'<button class="btn-dark-soft" id="nfLater">Decidir depois</button><button class="btn-gold" id="nfReviewNow">Ver reajustes</button>');
- $('nfLater').onclick=closeModal;$('nfReviewNow').onclick=()=>{closeModal();navigate('nf-reviews')};
+ openModal('Alterações de custo detectadas','<div class="nf-kpis"><div><small>Aumentos pendentes</small><strong class="nf-up">'+up+'</strong></div><div><small>Reduções pendentes</small><strong class="nf-down">'+down+'</strong></div></div><p>'+count+' produto(s) desta entrada tiveram mudança de custo. O preço de venda só muda após sua aprovação.</p>'+table(['Produto','Custo anterior','Novo custo','Venda sugerida'],r.slice(0,15).map(x=>row([h(x.name),amount(x.oldCost),amount(x.newCost),x.suggested===null?'Definir margem':amount(x.suggested)])).join('')),'<button class="btn-dark-soft" id="nfStockAlerts">Alertas de estoque</button><button class="btn-dark-soft" id="nfLater">Decidir depois</button><button class="btn-gold" id="nfReviewNow">Ver reajustes</button>');
+ $('nfStockAlerts').onclick=()=>{closeModal();oldAlerts()};$('nfLater').onclick=closeModal;$('nfReviewNow').onclick=()=>{closeModal();navigate('nf-reviews')};
 }
 function showReviews(){
  setHeader('Reajustes de preços','Aumentos e reduções aguardando aprovação.');
@@ -222,15 +222,69 @@ function showReviews(){
 function showNotes(){
  setHeader('Notas importadas','Histórico de entradas e prevenção de duplicidade.');
  const notes=get(K.n);
- appView.innerHTML=panel('Notas fiscais',notes.length?table(['Nota / fornecedor','Entrada','Itens','Total','Detalhes'],notes.map(n=>row(['<strong>'+h(n.key.slice(25,34))+'</strong><small>'+h(n.supplier)+'</small>',h(date(n.receivedAt)),n.lines.length,amount(n.total),'<button class="btn-dark-soft" data-nf-note="'+h(n.id)+'">Ver nota</button>'])).join('')):'<div class="empty-state"><strong>Nenhuma nota importada</strong></div>',btn('nfGo','Nova importação',true));
+ appView.innerHTML=panel('Notas fiscais',notes.length?table(['Nota / fornecedor','Entrada','Itens','Total','Situação','Detalhes'],notes.map(n=>row(['<strong>'+h(n.key.slice(25,34))+'</strong><small>'+h(n.supplier)+'</small>',h(date(n.receivedAt)),n.lines.length,amount(n.total),n.status==='reversed'?'Estornada':'Importada','<button class="btn-dark-soft" data-nf-note="'+h(n.id)+'">Ver nota</button>'])).join('')):'<div class="empty-state"><strong>Nenhuma nota importada</strong></div>','<div class="nf-toolbar">'+btn('nfBackup','Exportar backup')+btn('nfGo','Nova importação',true)+'</div>');
+ $('nfBackup').onclick=backup;
  $('nfGo').onclick=()=>navigate('nf-import');
- appView.querySelectorAll('[data-nf-note]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.nfNote);if(!n)return;openModal('Nota '+n.key.slice(25,34),'<div class="nf-key">'+h(n.key)+'</div><p>'+h(n.supplier)+' • '+amount(n.total)+' • Frete extra '+amount(n.extra)+'</p>'+table(['Código','Produto','Quantidade fiscal','Entrada','Custo'],n.lines.map(i=>row([h(i.code),h(i.name),i.qtyFiscal+' '+h(i.unit),i.qty,amount(i.cost)])).join('')),btn('nfCloseNote','Fechar'));$('nfCloseNote').onclick=closeModal});
+ appView.querySelectorAll('[data-nf-note]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.nfNote);if(!n)return;openModal('Nota '+n.key.slice(25,34),'<div class="nf-key">'+h(n.key)+'</div><p>'+h(n.supplier)+' • '+amount(n.total)+' • Frete extra '+amount(n.extra)+'</p>'+table(['Código','Produto','Quantidade fiscal','Entrada','Custo'],n.lines.map(i=>row([h(i.code),h(i.name),i.qtyFiscal+' '+h(i.unit),i.qty,amount(i.cost)])).join('')),(n.status==='imported'&&n.lines.every(i=>i.after)?btn('nfReverse','Estornar entrada'):'')+btn('nfCloseNote','Fechar'));$('nfCloseNote').onclick=closeModal;if($('nfReverse'))$('nfReverse').onclick=()=>{closeModal();askReverse(n)}});
 }
+
+function backup(){
+ const snapshot=D.snapshot();
+ const file=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download='moto-tudo-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function askReverse(n){
+ const expected=D.rawSnapshot(keys);
+ openModal('Estornar entrada fiscal','<div class="nf-warn">O estorno só é permitido se todos os produtos continuarem exatamente como ficaram após esta nota, sem movimentações posteriores, alterações de preço ou novas vendas. O histórico e a chave da nota serão preservados.</div><label class="nf-check"><input type="checkbox" id="nfReverseOk"> Confirmo que esta entrada precisa ser desfeita.</label>',btn('nfReverseCancel','Cancelar')+btn('nfReverseConfirm','Estornar',true));
+ $('nfReverseCancel').onclick=closeModal;$('nfReverseConfirm').onclick=()=>{
+  try{
+   if(!$('nfReverseOk').checked)throw Error('Confirme o estorno.');
+   const ps=copy(products),ms=copy(movements),os=copy(D.read(K.o,orders)),notes=get(K.n),hist=get(K.h),rev=get(K.r),now=new Date().toISOString();
+   const note=notes.find(x=>x.id===n.id&&x.status==='imported');if(!note)throw Error('Entrada não disponível.');
+   const originMoves=ms.filter(m=>m.invoiceId===n.id);if(originMoves.length!==note.lines.length||!os.some(o=>o.id===note.orderId&&o.invoiceId===n.id))throw Error('Movimentos originais foram alterados.');
+   const started=Date.parse(note.receivedAt);
+   for(const i of note.lines){
+    const p=ps.find(x=>x.id===i.productId);
+    if(!p||JSON.stringify(p)!==JSON.stringify(i.after))throw Error('Produto mudou após a entrada: '+i.name);
+    const om=originMoves.find(m=>m.productId===i.productId);
+    if(!om||ms.some(m=>m.productId===i.productId&&m.invoiceId!==n.id&&(Date.parse(m.date)>=started||Number(m.id)>=Number(om.id))))throw Error('Movimentação posterior: '+i.name);
+    if(os.some(o=>o.id!==note.orderId&&(o.items||[]).some(it=>it.productId===i.productId)&&(!i.before||o.status==='pending'||Date.parse(o.updatedAt||o.completedAt||o.date)>=started)))throw Error('Pedido relacionado impede o estorno: '+i.name);
+    if(rev.some(r=>r.productId===p.id&&r.batchId!==n.id&&r.status==='superseded'&&Date.parse(r.decidedAt)>=started))throw Error('Há reajustes de outra entrada vinculados: '+i.name);
+    if(rev.some(r=>r.batchId===n.id&&r.productId===p.id&&r.status==='accepted'))throw Error('Reajuste já aprovado: '+i.name);
+   }
+   for(const i of note.lines){
+    const j=ps.findIndex(p=>p.id===i.productId);const p=ps[j];
+    hist.unshift({id:id(),batchId:n.id,productId:p.id,name:p.name,date:now,source:'Estorno NF-e',kind:'reversal',oldCost:p.lastPurchaseCost,newCost:i.before?.lastPurchaseCost??i.before?.cost??null,oldPrice:p.price,newPrice:i.before?.price??null});
+    if(i.before)ps[j]=copy(i.before);else ps.splice(j,1);
+   }
+   for(const r of rev)if(r.batchId===n.id){r.status='reversed';r.decidedAt=now}
+   note.status='reversed';note.reversedAt=now;
+   const newMoves=ms.filter(m=>m.invoiceId!==n.id),newOrders=os.filter(o=>o.id!==note.orderId);
+   D.atomicWrite({[K.p]:ps,[K.m]:newMoves,[K.o]:newOrders,[K.n]:notes,[K.h]:hist,[K.r]:rev},expected);
+   products=ps;movements=newMoves;orders=newOrders;closeModal();render();toast('Entrada estornada','A nota permanece no histórico e não pode ser duplicada.','success');
+  }catch(e){toast('Estorno bloqueado',e.message,'danger')}
+ };
+}
+window.MotoTudoNFPriceEdit=function(before,item){
+ const expected=D.rawSnapshot([K.p,K.o,K.h,K.r]),ps=copy(products),os=copy(D.read(K.o,orders)),hist=get(K.h),rev=get(K.r),now=new Date().toISOString();
+ const i=ps.findIndex(p=>p.id===before.id);
+ if(i<0||!Number.isFinite(item.cost)||!Number.isFinite(item.price)||item.cost<0||item.price<0)throw Error('Cadastro ou valores inválidos.');
+ snapshotOrderCosts(os,ps);
+ if(Number(before.price)!==Number(item.price)){
+  const base=Number(item.lastPurchaseCost??item.cost);
+  if(base>0&&item.price>=base)item.targetMargin=1-base/item.price;else delete item.targetMargin;
+ }
+ if(!item.lastPurchaseCost&&Number(before.cost)!==Number(item.cost))item.lastPurchaseCost=item.cost;
+ hist.unshift({id:id(),productId:item.id,name:item.name,date:now,source:'Edição manual',kind:'manual',oldCost:before.cost,newCost:item.cost,oldPrice:before.price,newPrice:item.price});
+ for(const r of rev)if(r.productId===item.id&&r.status==='pending'){r.status='superseded';r.decidedAt=now}
+ ps[i]=copy(item);D.atomicWrite({[K.p]:ps,[K.o]:os,[K.h]:hist,[K.r]:rev},expected);products=ps;orders=os;
+};
+
 function showHistory(){
  setHeader('Histórico de preços','Evolução de custos, preços e decisões.');
  const all=get(K.h);
  appView.innerHTML=panel('Histórico de alterações','<input class="form-control-dark" id="nfSearchHist" placeholder="Pesquisar produto ou origem"><div id="nfHistResults"></div>');
- const draw=()=>{const q=N.norm($('nfSearchHist').value),rows=all.filter(x=>N.norm(x.name+' '+x.source).includes(q));$('nfHistResults').innerHTML=rows.length?table(['Data','Produto','Origem','Custo antes → depois','Venda antes → depois'],rows.slice(0,500).map(x=>row([h(date(x.date)),h(x.name),h(x.source), (x.oldCost===null?'—':amount(x.oldCost))+' → '+amount(x.newCost),(x.oldPrice===null?'—':amount(x.oldPrice))+' → '+amount(x.newPrice)])).join('')):'<div class="empty-state"><strong>Nenhuma alteração encontrada</strong></div>';};$('nfSearchHist').oninput=draw;draw();
+ const draw=()=>{const q=N.norm($('nfSearchHist').value),rows=all.filter(x=>N.norm(x.name+' '+x.source).includes(q));$('nfHistResults').innerHTML=rows.length?table(['Data','Produto','Origem','Custo antes → depois','Venda antes → depois'],rows.slice(0,500).map(x=>row([h(date(x.date)),h(x.name),h(x.source), (x.oldCost===null?'—':amount(x.oldCost))+' → '+(x.newCost===null?'—':amount(x.newCost)),(x.oldPrice===null?'—':amount(x.oldPrice))+' → '+(x.newPrice===null?'—':amount(x.newPrice))])).join('')):'<div class="empty-state"><strong>Nenhuma alteração encontrada</strong></div>';};$('nfSearchHist').oninput=draw;draw();
 }
 const oldRender=window.render;
 window.render=function(){syncChrome();if(state.view==='nf-import')return showImport();if(state.view==='nf-notes')return showNotes();if(state.view==='nf-history')return showHistory();if(state.view==='nf-reviews')return showReviews();return oldRender()};
