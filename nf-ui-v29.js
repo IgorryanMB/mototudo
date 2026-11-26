@@ -57,9 +57,9 @@ async function nextFile(){
   const candidates=products;
   const rows=n.lines.map(i=>{
    const matches=candidates.filter(p=>Array.isArray(p.nfCodes)&&p.nfCodes.some(c=>c.cnpj===cnpj&&String(c.code)===i.code)||sup&&Number(p.supplierId)===Number(sup.id)&&String(p.code)===i.code);
-   return {item:i,target:matches.length===1?String(matches[0].id):'',factor:matches.length===1?(matches[0].nfCodes?.find(c=>c.cnpj===cnpj&&String(c.code)===i.code)?.factor??N.multiplier(i)):N.multiplier(i),category:categoryFor(i.name),name:i.name};
+   return {item:i,target:matches.length===1?String(matches[0].id):'',factor:matches.length===1?(matches[0].nfCodes?.find(c=>c.cnpj===cnpj&&String(c.code)===i.code)?.factor??N.multiplier(i)):N.multiplier(i),category:categoryFor(i.name),name:i.name,margin:''};
   });
-  draft={n,cnpj,supplierId:sup?String(sup.id):'new',supplierName:sup?.name||n.supplier,recipient:settings.nfRecipient||'',extra:0,margin:'',verified:false,rows,expected:D.rawSnapshot(keys)};
+  draft={n,cnpj,supplierId:sup?String(sup.id):'new',supplierName:sup?.name||n.supplier,recipient:settings.nfRecipient||'',extra:0,margin:String(settings.nfDefaultMargin??''),categoryMargins:copy(settings.nfCategoryMargins||{}),verified:false,rows,expected:D.rawSnapshot(keys)};
  }catch(e){error=e.message}
  finally{busy=false;if(state.view==='nf-import')showImport()}
 }
@@ -75,23 +75,25 @@ function showImport(){
  }
  const d=draft,n=d.n;
  const supopts='<option value="new">Cadastrar fornecedor</option>'+suppliers.map(s=>'<option value="'+h(s.id)+'" '+(String(s.id)===d.supplierId?'selected':'')+'>'+h(s.name)+'</option>').join('');
+ const defaultMarginFor=r=>{const raw=r.margin!==''?r.margin:(d.categoryMargins[r.category]!==undefined&&d.categoryMargins[r.category]!==''?d.categoryMargins[r.category]:d.margin);const x=Number(raw);return raw!==''&&Number.isFinite(x)&&x>=0&&x<100?x/100:null};
  const productOpts=products.map(p=>'<option value="'+h(p.id)+'">'+h(p.code+' • '+p.name)+'</option>').join('');
  const categoriesOpts=c=>categories.map(x=>'<option '+(x.name===c?'selected':'')+'>'+h(x.name)+'</option>').join('');
  body+='<div class="nf-kpis"><div><small>NF-e</small><strong>'+h(n.key.slice(25,34))+'</strong></div><div><small>Itens</small><strong>'+n.lines.length+'</strong></div><div><small>Mercadorias</small><strong>'+amount(n.prodTotal)+'</strong></div><div><small>Total da NF</small><strong>'+amount(n.nfTotal)+'</strong></div></div>';
  body+='<div class="nf-key">'+h(n.key)+' • '+h(n.date||'Data não identificada')+' • '+h(n.source)+'</div>';
  body+='<div class="nf-fields"><label>Fornecedor<select id="nfSupplier" class="form-select-dark">'+supopts+'</select></label><label>Nome do fornecedor (novo)<input class="form-control-dark" id="nfSupplierName" value="'+h(d.supplierName)+'" maxlength="150"></label><label>CNPJ da loja (destinatário)<input class="form-control-dark" id="nfRecipient" value="'+h(d.recipient)+'" placeholder="14 dígitos"></label><label>Frete adicional pago (R$)<input class="form-control-dark" id="nfExtra" type="number" min="0" step=".01" value="'+d.extra+'"></label><label>Margem bruta inicial de novos produtos (%)<input class="form-control-dark" id="nfMargin" type="number" min="0" max="99" step=".1" value="'+h(d.margin)+'" placeholder="Informe uma margem"></label></div>';
+ body+='<details class="nf-margin-details"><summary>Margens padrão por categoria (opcional)</summary><div class="nf-fields">'+categories.map((cat,i)=>'<label>'+h(cat.name)+' (%)<input type="number" min="0" max="99.9" step=".1" class="form-control-dark" data-nf-cat-margin="'+i+'" value="'+h(d.categoryMargins[cat.name]??'')+'" placeholder="Usar margem geral"></label>').join('')+'</div></details>';
  if(n.externalFreightHint)body+='<div class="nf-warn">A nota menciona frete por conta do destinatário. Informe somente o valor efetivamente pago, se não estiver incluído no total.</div>';
  body+='<div class="nf-info">Destinatário lido: '+h(n.recipient||'não identificado')+'. Custo bruto de aquisição calculado pelo total da nota, com ajustes rateados; confira tributos recuperáveis com o contador. Pares e kits são mantidos como unidade de venda; caixas precisam de conversão confirmada.</div>';
  body+='<datalist id="nfProducts">'+productOpts+'</datalist><div class="nf-toolbar">'+btn('nfAllNew','Marcar não vinculados como novos')+btn('nfClear','Desmarcar novos')+'<span id="nfSummary"></span></div>';
  let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
- body+=table(['Produto da nota','Unidade / qtd.','Conversão','Vincular / cadastrar','Categoria (novo)','Custo unit.'],d.rows.map((r,i)=>{
+ body+=table(['Produto da nota','Unidade / qtd.','Conversão','Vincular / cadastrar','Categoria (novo)','Custo unit.','Estoque e venda'],d.rows.map((r,i)=>{
   const p=resolveProduct(products,r.target);
   const fact=r.factor??'';
   return row(['<strong>'+h(r.item.code)+'</strong><input class="form-control-dark nf-name" data-i="'+i+'" data-f="name" value="'+h(r.name)+'"><small>'+h(r.item.cfop)+' • '+h(r.item.ncm)+' • Pág. '+r.item.page+'</small>',
   h(r.item.unit)+' × '+r.item.qty,'<input class="form-control-dark nf-factor" data-i="'+i+'" data-f="factor" type="number" min="1" max="10000" step="1" value="'+fact+'"><small data-nf-qty="'+i+'">'+(fact?r.item.qty*fact:'Conferir')+' no estoque</small>',
   '<input class="form-control-dark nf-target" data-i="'+i+'" data-f="target" list="nfProducts" value="'+h(r.target)+'" placeholder="Código, nome ou NOVO"><small data-nf-match="'+i+'">'+h(p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo')+'</small>',
   '<select class="form-select-dark nf-category" data-i="'+i+'" data-f="category">'+categoriesOpts(r.category)+'</select>',
-  '<strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong>']);
+  '<strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong>', '<small data-nf-stock="'+i+'"></small><small data-nf-sale="'+i+'"></small><input class="form-control-dark" data-i="'+i+'" data-f="margin" type="number" min="0" max="99.9" step=".1" value="'+h(r.margin)+'" placeholder="Margem individual %" '+(p?'disabled':'')+'>']);
  }).join(''));
  body+='<label class="nf-check"><input type="checkbox" id="nfVerified" '+(d.verified?'checked':'')+'> Conferi destinatário, autorização da NF-e, recebimento físico, unidades, impostos, produtos e custos. Confirmo que esta mercadoria ainda não foi lançada no estoque.</label>';
  body+='<div class="nf-toolbar">'+btn('nfCancel','Descartar prévia')+btn('nfConfirm','Confirmar entrada',true)+(queue.length?'<small>'+queue.length+' arquivo(s) aguardando</small>':'')+'</div>';
@@ -99,7 +101,8 @@ function showImport(){
  $('nfSupplier').value=d.supplierId;$('nfSupplier').onchange=e=>{d.supplierId=e.target.value;const s=suppliers.find(x=>String(x.id)===d.supplierId);if(s){d.supplierName=s.name;d.rows.forEach(r=>{if(!r.target){const matches=products.filter(p=>Number(p.supplierId)===Number(s.id)&&String(p.code)===r.item.code);if(matches.length===1)r.target=String(matches[0].id)}})}d.verified=false;showImport()};
  $('nfSupplierName').oninput=e=>{d.supplierName=e.target.value;d.verified=false;$('nfVerified').checked=false};
  $('nfRecipient').oninput=e=>{d.recipient=e.target.value;d.verified=false;$('nfVerified').checked=false};
- $('nfMargin').oninput=e=>{d.margin=e.target.value;d.verified=false;$('nfVerified').checked=false};
+ $('nfMargin').oninput=e=>{d.margin=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()};
+ appView.querySelectorAll('[data-nf-cat-margin]').forEach(el=>el.oninput=e=>{d.categoryMargins[categories[Number(e.target.dataset.nfCatMargin)].name]=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()});
  $('nfExtra').oninput=e=>{d.extra=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()};
  $('nfVerified').onchange=e=>d.verified=e.target.checked;
  appView.querySelectorAll('[data-f]').forEach(el=>el.oninput=e=>{const t=e.target;d.rows[Number(t.dataset.i)][t.dataset.f]=t.value;d.verified=false;$('nfVerified').checked=false;refresh()});
@@ -114,6 +117,9 @@ function showImport(){
    const p=resolveProduct(products,r.target),fact=Number(r.factor),qty=r.item.qty*fact;
    const qtyEl=appView.querySelector('[data-nf-qty="'+i+'"]'),match=appView.querySelector('[data-nf-match="'+i+'"]'),cost=appView.querySelector('[data-nf-cost="'+i+'"]');
    qtyEl.textContent=fact>0?qty+' no estoque':'Conferir';match.textContent=p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo válido';cost.textContent=fact>0?amount(costs[i]/qty):'—';
+   const stockEl=appView.querySelector('[data-nf-stock="'+i+'"]'),saleEl=appView.querySelector('[data-nf-sale="'+i+'"]');const marginInput=appView.querySelector('[data-i="'+i+'"][data-f="margin"]');if(marginInput)marginInput.disabled=!!p;
+   const prev=Number(p?.lastPurchaseCost??p?.cost),price=Number(p?.price),m=p?(Number.isFinite(p.targetMargin)?p.targetMargin:(prev>0&&price>=prev?1-prev/price:null)):defaultMarginFor(r);const suggest=fact>0?N.suggested(N.round(costs[i]/qty),m):null;
+   if(stockEl)stockEl.textContent=p?'Estoque: '+p.stock+' → '+(Number(p.stock)+qty):r.target==='NOVO'?'Estoque inicial: '+qty:'Vínculo pendente';if(saleEl)saleEl.textContent=suggest===null?'Margem a definir':(p?'Venda: '+amount(price)+' → ':'Venda inicial: ')+amount(suggest)+' ('+percent(m)+')';
    if((!p&&r.target!=='NOVO')||!(fact>=1&&Number.isInteger(fact)))unresolved++;
   });$('nfSummary').textContent=unresolved+' linha(s) exigem conferência';
  }
@@ -146,7 +152,7 @@ function confirmEntry(){
   let p=resolveProduct(ps,r.target),isNew=r.target==='NOVO',before;
   if(isNew){
    if(ps.some(p=>p.nfCodes?.some(x=>x.cnpj===d.cnpj&&x.code===i.code)||Number(p.supplierId)===Number(supplier.id)&&String(p.code)===i.code))throw Error('Produto já cadastrado com esse código: '+i.code);
-   const margin=Number(d.margin)/100;if(d.margin===''||!Number.isFinite(margin)||margin<0||margin>=1)throw Error('Informe a margem inicial dos novos produtos.');
+   const rawMargin=r.margin!==''?r.margin:(d.categoryMargins[r.category]!==undefined&&d.categoryMargins[r.category]!==''?d.categoryMargins[r.category]:d.margin);const margin=Number(rawMargin)/100;if(rawMargin===''||!Number.isFinite(margin)||margin<0||margin>=1)throw Error('Informe a margem inicial de '+r.name+'.');
    const internalCode=d.cnpj+'-'+i.code;
    if(ps.some(x=>x.code===internalCode))throw Error('Código interno já existente: '+internalCode);
    p={id:nextId++,name:r.name.trim(),code:internalCode,brand:'',application:'',location:'',category:r.category,supplierId:supplier.id,stock:0,min:0,cost:purchase,price:N.suggested(purchase,margin),active:true,targetMargin:margin,nfCodes:[],stockUnit:factor>1?'UN':i.unit};ps.push(p);before=null;
@@ -175,6 +181,7 @@ function confirmEntry(){
   records.push({code:i.code,name:i.name,qtyFiscal:i.qty,unit:i.unit,factor,qty,productId:p.id,total:i.total,cost:purchase,allocated:costs[k],stockBefore:oldStock,stockAfter:p.stock,before,after:copy(p)});
  }
  cfg.nfRecipient=N.digits(d.recipient);
+ cfg.nfCategoryMargins={};for(const cat of categories){const raw=d.categoryMargins[cat.name];if(raw===undefined||raw==='')continue;const x=Number(raw);if(!Number.isFinite(x)||x<0||x>=100)throw Error('Margem da categoria inválida: '+cat.name);cfg.nfCategoryMargins[cat.name]=x;}if(d.margin!==''){const x=Number(d.margin);if(!Number.isFinite(x)||x<0||x>=100)throw Error('Margem geral inválida.');cfg.nfDefaultMargin=x;}else delete cfg.nfDefaultMargin;
  const orderCode='NF-'+n.key.slice(6,20)+'-'+n.key.slice(25,34);
  os.unshift({id:orderId,code:orderCode,type:'in',date:now,name:supplier.name,note:'Entrada por NF-e',payment:'',labor:0,status:'completed',items,invoiceId:batchId});
  notes.unshift({id:batchId,key:n.key,date:n.date,receivedAt:now,supplier:supplier.name,cnpj:d.cnpj,source:n.source,total:n.nfTotal,productTotal:n.prodTotal,extra,lines:records,orderId,status:'imported',costChanges:changes});
@@ -282,9 +289,25 @@ window.MotoTudoNFPriceEdit=function(before,item){
 
 function showHistory(){
  setHeader('Histórico de preços','Evolução de custos, preços e decisões.');
- const all=get(K.h);
- appView.innerHTML=panel('Histórico de alterações','<input class="form-control-dark" id="nfSearchHist" placeholder="Pesquisar produto ou origem"><div id="nfHistResults"></div>');
- const draw=()=>{const q=N.norm($('nfSearchHist').value),rows=all.filter(x=>N.norm(x.name+' '+x.source).includes(q));$('nfHistResults').innerHTML=rows.length?table(['Data','Produto','Origem','Custo antes → depois','Venda antes → depois'],rows.slice(0,500).map(x=>row([h(date(x.date)),h(x.name),h(x.source), (x.oldCost===null?'—':amount(x.oldCost))+' → '+(x.newCost===null?'—':amount(x.newCost)),(x.oldPrice===null?'—':amount(x.oldPrice))+' → '+(x.newPrice===null?'—':amount(x.newPrice))])).join('')):'<div class="empty-state"><strong>Nenhuma alteração encontrada</strong></div>';};$('nfSearchHist').oninput=draw;draw();
+ const all=get(K.h),notes=get(K.n),names=[...new Map(all.map(x=>[String(x.productId),x.name])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'));
+ const supplierNames=[...new Set(notes.map(n=>n.supplier))].sort();
+ appView.innerHTML=panel('Histórico de alterações','<div class="nf-fields"><label>Pesquisar<input class="form-control-dark" id="nfSearchHist" placeholder="Produto ou origem"></label><label>Produto<select class="form-select-dark" id="nfHistProduct"><option value="">Todos</option>'+names.map(([id,name])=>'<option value="'+h(id)+'">'+h(name)+'</option>').join('')+'</select></label><label>Alteração<select class="form-select-dark" id="nfHistDirection"><option value="">Todas</option><option value="up">Aumentos</option><option value="down">Reduções</option><option value="manual">Edições manuais</option></select></label><label>Fornecedor<select class="form-select-dark" id="nfHistSupplier"><option value="">Todos</option>'+supplierNames.map(n=>'<option>'+h(n)+'</option>').join('')+'</select></label><label>De<input class="form-control-dark" id="nfHistStart" type="date"></label><label>Até<input class="form-control-dark" id="nfHistEnd" type="date"></label></div><div id="nfHistChart"></div><div id="nfHistResults"></div>');
+ const draw=()=>{
+  const q=N.norm($('nfSearchHist').value),product=$('nfHistProduct').value,direction=$('nfHistDirection').value,supplier=$('nfHistSupplier').value,start=$('nfHistStart').value,end=$('nfHistEnd').value;
+  const rows=all.filter(x=>{
+   const d=new Date(x.date),ymd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+   const up=(x.oldCost!=null&&x.newCost!=null&&x.newCost>x.oldCost)||(x.oldPrice!=null&&x.newPrice!=null&&x.newPrice>x.oldPrice);
+   const down=(x.oldCost!=null&&x.newCost!=null&&x.newCost<x.oldCost)||(x.oldPrice!=null&&x.newPrice!=null&&x.newPrice<x.oldPrice);
+   return N.norm(x.name+' '+x.source).includes(q)&&(!product||String(x.productId)===product)&&(!supplier||notes.some(n=>n.id===x.batchId&&n.supplier===supplier))&&(!start||ymd>=start)&&(!end||ymd<=end)&&(!direction||(direction==='up'?up:direction==='down'?down:x.kind==='manual'));
+  });
+  const numv=x=>x==null?'—':amount(x);
+  $('nfHistResults').innerHTML=rows.length?'<p class="nf-info">'+rows.length+' registro(s) • exibindo até 500</p>'+table(['Data','Produto','Origem','Custo antes → depois','Venda antes → depois'],rows.slice(0,500).map(x=>row([h(date(x.date)),h(x.name),h(x.source),numv(x.oldCost)+' → '+numv(x.newCost),numv(x.oldPrice)+' → '+numv(x.newPrice)])).join('')):'<div class="empty-state"><strong>Nenhuma alteração encontrada</strong></div>';
+  const series=rows.filter(x=>x.newCost!=null&&x.newPrice!=null).slice(0,60).reverse();
+  if(!product||series.length<2){$('nfHistChart').innerHTML='';return}
+  const max=Math.max(1,...series.flatMap(x=>[Number(x.newCost),Number(x.newPrice)]));const coords=key=>series.map((x,i)=>[20+520*i/(series.length-1),135-115*Number(x[key])/max].map(v=>v.toFixed(2)).join(',')).join(' ');
+  $('nfHistChart').innerHTML='<div class="nf-chart"><strong>Evolução dos preços</strong><svg viewBox="0 0 560 150" width="100%" role="img" aria-label="Evolução do custo e venda"><path d="M20 20V135H540" fill="none" stroke="#555"/><polyline points="'+coords('newCost')+'" fill="none" stroke="#aab2c6" stroke-width="3"/><polyline points="'+coords('newPrice')+'" fill="none" stroke="#f6c542" stroke-width="3"/></svg><small>Cinza: custo • amarelo: venda • '+h(amount(max))+' no topo</small></div>';
+ };
+ for(const id of ['nfSearchHist','nfHistProduct','nfHistDirection','nfHistSupplier','nfHistStart','nfHistEnd'])$(id).oninput=draw;draw();
 }
 const oldRender=window.render;
 window.render=function(){syncChrome();if(state.view==='nf-import')return showImport();if(state.view==='nf-notes')return showNotes();if(state.view==='nf-history')return showHistory();if(state.view==='nf-reviews')return showReviews();return oldRender()};
