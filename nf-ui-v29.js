@@ -26,6 +26,28 @@ const pending=()=>get(K.r).filter(r=>r.status==='pending');
 const statusLabel=s=>({reversed:'Estornado',pending:'Pendente',accepted:'Aplicado',declined:'Mantido',superseded:'Substituído',created:'Cadastro inicial'})[s]||s;
 const id=()=>crypto.randomUUID();
 let draft=null, queue=[], busy=false, error='';
+
+function priceComparison(oldCost,newCost,oldPrice,suggested){
+ const number=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v):null;
+ const metric=(cost,price)=>({cost,price,profit:cost!==null&&price!==null?N.round(price-cost):null,margin:cost!==null&&price!==null&&price>0?1-cost/price:null});
+ const a=metric(number(oldCost),number(oldPrice)),b=metric(number(newCost),number(oldPrice)),s=metric(number(newCost),number(suggested));
+ const change=(x,y)=>x!==null&&x>0&&y!==null?(y-x)/x:null;
+ return {before:a,keep:b,suggest:s,costChange:change(a.cost,b.cost),priceChange:change(a.price,s.price)};
+}
+const compareMoney=v=>v===null?'—':amount(v);
+const comparePercent=v=>v===null?'—':percent(v);
+const signedPercent=v=>v===null?'—':(v>0?'+':'')+percent(v);
+const deltaColor=v=>v===null||Math.abs(v)<1e-9?'nf-neutral':v>0?'nf-up':'nf-down';
+function comparisonHtml(oldCost,newCost,oldPrice,suggested,target,compact=false){
+ const v=priceComparison(oldCost,newCost,oldPrice,suggested),a=v.before,b=v.keep,s=v.suggest;
+ const existing=a.cost!==null&&a.price!==null;
+ const direction=v.priceChange===null?'Definir preço':v.priceChange>1e-9?'Sugestão: aumentar':v.priceChange< -1e-9?'Sugestão: reduzir':'Sugestão: manter';
+ const costDir=v.costChange===null?'Novo custo':v.costChange>1e-9?'Custo aumentou':v.costChange< -1e-9?'Custo reduziu':'Custo sem alteração';
+ const pp=m=>{if(a.margin===null||m===null)return '';const d=(m-a.margin)*100;return (d>0?'+':'')+d.toFixed(1).replace('.',',')+' p.p.'};
+ const column=(title,m,kind)=>'<div class="nf-compare-column '+kind+'"><strong class="nf-compare-title">'+title+'</strong><div><small>Custo unitário</small><b>'+compareMoney(m.cost)+'</b></div><div><small>Preço de venda</small><b>'+compareMoney(m.price)+'</b></div><div><small>Margem bruta</small><b>'+comparePercent(m.margin)+'</b>'+(kind!=='before'&&existing?'<small>'+pp(m.margin)+'</small>':'')+'</div><div><small>Lucro bruto / un.</small><b class="'+(m.profit!==null&&m.profit<0?'nf-up':'')+'">'+compareMoney(m.profit)+'</b></div></div>';
+ return '<div class="nf-comparison '+(compact?'nf-comparison-compact':'')+'"><div class="nf-compare-top"><span class="'+deltaColor(v.costChange)+'">'+costDir+(v.costChange===null?'':' • '+signedPercent(v.costChange))+'</span><span class="'+deltaColor(v.priceChange)+'">'+(existing?direction:'Venda inicial')+(v.priceChange===null?'':' • '+signedPercent(v.priceChange))+'</span></div><div class="nf-compare-grid '+(!existing?'nf-compare-new':'')+'">'+(existing?column('Antes da nota',a,'before')+column('Sem reajuste',b,'keep'):'')+column(existing?'Com reajuste':'Novo produto',s,'suggest')+'</div><small class="nf-compare-note">'+(Number.isFinite(target)?'Margem-alvo: '+percent(target)+' • ':'')+'Base: último custo de compra. Lucro bruto por unidade, antes de outras despesas.</small></div>';
+}
+
 function categoryFor(name){
  const s=N.norm(name);
  if(/CAPACETE|^CAP |RETROVISOR|MANOPLA/.test(s))return 'Capacetes e acessórios';
@@ -95,11 +117,11 @@ function showImport(){
  body+='<div class="nf-info">Destinatário lido: '+h(n.recipient||'não identificado')+'. Custo bruto de aquisição calculado pelo total da nota, com ajustes rateados; confira tributos recuperáveis com o contador. Pares e kits são mantidos como unidade de venda; caixas precisam de conversão confirmada.</div>';
  body+='<datalist id="nfProducts">'+productOpts+'</datalist><div class="nf-toolbar nf-import-tools">'+btn('nfAllNew','Cadastrar novos não ambíguos')+btn('nfClear','Ver itens a conferir')+btn('nfConfirmTop','Conferir e confirmar',true)+'<span id="nfSummary"></span></div>';
  let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
- body+='<div class="nf-filterbar"><input class="form-control-dark" id="nfSearchItems" placeholder="Buscar produto ou código"><select class="form-select-dark" id="nfItemFilter"><option value="all">Todos os produtos</option><option value="attention">Atenção necessária</option><option value="new">Novos produtos</option><option value="linked">Já cadastrados</option></select></div><div class="nf-item-list">';
+ body+='<div class="nf-filterbar"><input class="form-control-dark" id="nfSearchItems" placeholder="Buscar produto ou código"><select class="form-select-dark" id="nfItemFilter"><option value="all">Todos os produtos</option><option value="attention">Atenção necessária</option><option value="new">Novos produtos</option><option value="linked">Já cadastrados</option><option value="up">Custo aumentou</option><option value="down">Custo reduziu</option></select></div><div class="nf-item-list">';
  body+=d.rows.map((r,i)=>{
   const p=resolveProduct(products,r.target),fact=r.factor??'',needs=(!p&&r.target!=='NOVO')||!fact;
   const details='<div class="nf-item-fields"><label>Descrição<input class="form-control-dark nf-name" data-i="'+i+'" data-f="name" value="'+h(r.name)+'"></label><label>Destino<select class="form-select-dark" data-i="'+i+'" data-nf-mode><option value="NOVO" '+(r.target==='NOVO'?'selected':'')+'>Cadastrar novo produto</option><option value="link" '+(r.target&&r.target!=='NOVO'?'selected':'')+'>Vincular a produto existente</option><option value="" '+(!r.target?'selected':'')+'>Revisar vínculo</option></select></label><label data-nf-linkbox="'+i+'" '+(r.target==='NOVO'?'hidden':'')+'>Produto existente<input class="form-control-dark nf-target" data-i="'+i+'" data-f="target" list="nfProducts" value="'+h(r.target==='NOVO'?'':r.target)+'" placeholder="Digite código ou nome do produto"></label><label>Unidades por embalagem<input class="form-control-dark nf-factor" data-i="'+i+'" data-f="factor" type="number" min="1" max="10000" step="1" value="'+h(fact)+'"></label><label>Categoria<select class="form-select-dark nf-category" data-i="'+i+'" data-f="category">'+categoriesOpts(r.category)+'</select></label><label>Margem individual (opcional)<input class="form-control-dark" data-i="'+i+'" data-f="margin" type="number" min="0" max="99.9" step=".1" value="'+h(r.margin)+'" placeholder="Usar padrão" '+(p?'disabled':'')+'></label></div>';
-  return '<details class="nf-item" data-nf-card="'+i+'" '+(needs?'open':'')+'><summary><div class="nf-item-heading"><small>'+h(r.item.code)+' • '+h(r.item.unit)+' × '+r.item.qty+'</small><strong>'+h(r.name)+'</strong><span data-nf-match="'+i+'" class="nf-item-status"></span></div><div class="nf-item-values"><small data-nf-qty="'+i+'"></small><strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong><small data-nf-stock="'+i+'"></small><small data-nf-sale="'+i+'"></small></div><i class="bi bi-chevron-down nf-item-arrow"></i></summary>'+details+'</details>';
+  return '<details class="nf-item" data-nf-card="'+i+'" '+(needs?'open':'')+'><summary><div class="nf-item-heading"><small>'+h(r.item.code)+' • '+h(r.item.unit)+' × '+r.item.qty+'</small><strong>'+h(r.name)+'</strong><span data-nf-match="'+i+'" class="nf-item-status"></span></div><div class="nf-item-values"><small data-nf-qty="'+i+'"></small><strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong><small data-nf-stock="'+i+'"></small><small data-nf-sale="'+i+'"></small></div><i class="bi bi-chevron-down nf-item-arrow"></i></summary><div data-nf-compare="'+i+'"></div>'+details+'</details>';
  }).join('')+'</div>';
  body+='<input type="checkbox" id="nfVerified" hidden>';
  body+='<div class="nf-toolbar">'+btn('nfCancel','Descartar prévia')+btn('nfConfirm','Confirmar entrada',true)+(queue.length?'<small>'+queue.length+' arquivo(s) aguardando</small>':'')+'</div>';
@@ -150,9 +172,14 @@ function showImport(){
    const qtyEl=appView.querySelector('[data-nf-qty="'+i+'"]'),match=appView.querySelector('[data-nf-match="'+i+'"]'),cost=appView.querySelector('[data-nf-cost="'+i+'"]');
    qtyEl.textContent=fact>0?qty+' no estoque':'Conferir';match.textContent=p?'Já cadastrado: '+p.name:r.target==='NOVO'?'Novo produto':'Vínculo a conferir';match.dataset.state=p?'linked':r.target==='NOVO'?'new':'attention';cost.textContent=fact>0?amount(costs[i]/qty):'—';
    const stockEl=appView.querySelector('[data-nf-stock="'+i+'"]'),saleEl=appView.querySelector('[data-nf-sale="'+i+'"]');const marginInput=appView.querySelector('[data-i="'+i+'"][data-f="margin"]');if(marginInput)marginInput.disabled=!!p;
-   const prev=Number(p?.lastPurchaseCost??p?.cost),price=Number(p?.price),m=p?(Number.isFinite(p.targetMargin)?p.targetMargin:(prev>0&&price>=prev?1-prev/price:null)):defaultMarginFor(r);const suggest=fact>0?N.suggested(N.round(costs[i]/qty),m):null;
+   const prev=Number(p?.lastPurchaseCost??p?.cost),price=Number(p?.price),m=p?(Number.isFinite(p.targetMargin)&&p.targetMargin>=0&&p.targetMargin<1?p.targetMargin:(prev>0&&price>=prev?1-prev/price:null)):defaultMarginFor(r);const suggest=fact>0?N.suggested(N.round(costs[i]/qty),m):null;
    if(stockEl)stockEl.textContent=p?'Estoque: '+p.stock+' → '+(Number(p.stock)+qty):r.target==='NOVO'?'Estoque inicial: '+qty:'Vínculo pendente';if(saleEl)saleEl.textContent=suggest===null?'Margem a definir':(p?'Venda: '+amount(price)+' → ':'Venda inicial: ')+amount(suggest)+' ('+percent(m)+')';
-   const need=(!p&&r.target!=='NOVO')||!(fact>=1&&Number.isInteger(fact)&&Number.isSafeInteger(qty))||(r.target==='NOVO'&&m===null);if(need)unresolved++;if(p)linked++;if(r.target==='NOVO')newCount++;const card=appView.querySelector('[data-nf-card="'+i+'"]');card.dataset.needs=String(need);card.hidden=!N.norm(r.name+' '+r.item.code).includes(q)||(filter==='attention'&&!need)||(filter==='new'&&r.target!=='NOVO')||(filter==='linked'&&!p);
+   const newCost=fact>0&&Number.isFinite(qty)&&qty>0?N.round(costs[i]/qty):null;
+   const comparison=priceComparison(p?prev:null,newCost,p?price:null,suggest);
+   const compareEl=appView.querySelector('[data-nf-compare="'+i+'"]');
+   if(compareEl)compareEl.innerHTML=(p||r.target==='NOVO')?comparisonHtml(p?prev:null,newCost,p?price:null,suggest,m):'';
+   if(p&&newCost!==null&&comparison.costChange!==null&&comparison.costChange!==0)cost.textContent=amount(prev)+' → '+amount(newCost)+' ('+signedPercent(comparison.costChange)+')';
+   const need=(!p&&r.target!=='NOVO')||!(fact>=1&&Number.isInteger(fact)&&Number.isSafeInteger(qty))||(r.target==='NOVO'&&m===null);if(need)unresolved++;if(p)linked++;if(r.target==='NOVO')newCount++;const card=appView.querySelector('[data-nf-card="'+i+'"]');card.dataset.needs=String(need);card.hidden=!N.norm(r.name+' '+r.item.code).includes(q)||(filter==='attention'&&!need)||(filter==='new'&&r.target!=='NOVO')||(filter==='linked'&&!p)||(filter==='up'&&(!p||!(comparison.costChange>0)))||(filter==='down'&&(!p||!(comparison.costChange<0)));
   });$('nfSummary').textContent=newCount+' novos • '+linked+' vinculados • '+unresolved+' a conferir';
  }
 }
@@ -205,7 +232,7 @@ function confirmEntry(){
   if(!p.nfCodes.some(x=>x.cnpj===d.cnpj&&x.code===i.code))p.nfCodes.push({cnpj:d.cnpj,code:i.code,factor,unit:i.unit});
   else {const link=p.nfCodes.find(x=>x.cnpj===d.cnpj&&x.code===i.code);if(link.factor!==factor||link.unit!==i.unit)throw Error('Conversão diferente da última entrada: '+p.name);}
   const suggested=N.suggested(purchase,margin);
-  for(const rev of reviews)if(rev.productId===p.id&&rev.status==='pending'){rev.status='superseded';rev.decidedAt=now}
+  if(!isNew&&Math.abs(oldPurchase-purchase)>.00001)for(const rev of reviews)if(rev.productId===p.id&&rev.status==='pending'){rev.status='superseded';rev.decidedAt=now}
   if(!isNew&&Math.abs(oldPurchase-purchase)>.00001){changes++;reviews.unshift({id:id(),batchId,productId:p.id,name:p.name,oldCost:oldPurchase,newCost:purchase,oldPrice,suggested,margin,status:'pending',date:now})}
   hist.unshift({id:id(),batchId,productId:p.id,name:p.name,date:now,source:'NF-e',oldCost:isNew?null:oldPurchase,newCost:purchase,oldPrice:isNew?null:oldPrice,newPrice:p.price,oldAverage:isNew?null:oldCost,newAverage:p.cost,kind:isNew?'created':'purchase'});
   const movement={id:moveId++,type:'in',productId:p.id,product:p.name,qty,unit:purchase,location:p.location||'',date:now,note:'Entrada NF-e '+n.key.slice(25,34),orderId,orderCode:'NF-'+n.key.slice(6,20)+'-'+n.key.slice(25,34),invoiceId:batchId};
@@ -220,11 +247,11 @@ function confirmEntry(){
  D.atomicWrite({[K.p]:ps,[K.s]:ss,[K.m]:ms,[K.o]:os,[K.cfg]:cfg,[K.n]:notes,[K.h]:hist,[K.r]:reviews},d.expected);
  products=ps;suppliers=ss;movements=ms;orders=os;settings=cfg;draft=null;error='';render();
  toast('Nota importada',records.length+' linhas registradas com segurança local.','success');
- if(changes)showChanges(changes);
+ if(changes)showChanges(changes,batchId);
 }
-function showChanges(count){
- const r=pending(),up=r.filter(x=>x.newCost>x.oldCost).length,down=r.filter(x=>x.newCost<x.oldCost).length;
- openModal('Alterações de custo detectadas','<div class="nf-kpis"><div><small>Aumentos pendentes</small><strong class="nf-up">'+up+'</strong></div><div><small>Reduções pendentes</small><strong class="nf-down">'+down+'</strong></div></div><p>'+count+' produto(s) desta entrada tiveram mudança de custo. O preço de venda só muda após sua aprovação.</p>'+table(['Produto','Custo anterior','Novo custo','Venda sugerida'],r.slice(0,15).map(x=>row([h(x.name),amount(x.oldCost),amount(x.newCost),x.suggested===null?'Definir margem':amount(x.suggested)])).join('')),'<button class="btn-dark-soft" id="nfStockAlerts">Alertas de estoque</button><button class="btn-dark-soft" id="nfLater">Decidir depois</button><button class="btn-gold" id="nfReviewNow">Ver reajustes</button>');
+function showChanges(count,batchId){
+ const r=pending().filter(x=>!batchId||x.batchId===batchId),up=r.filter(x=>x.newCost>x.oldCost).length,down=r.filter(x=>x.newCost<x.oldCost).length;
+ openModal('Alterações de custo detectadas','<div class="nf-kpis"><div><small>Custos maiores</small><strong class="nf-up">'+up+'</strong></div><div><small>Custos menores</small><strong class="nf-down">'+down+'</strong></div></div><p>'+r.length+' produto(s) com novo custo. Compare as margens e o lucro antes de decidir. Nenhum preço de venda foi alterado.</p><div class="nf-popup-comparisons">'+r.slice(0,5).map(x=>'<article class="nf-review-card"><h4>'+h(x.name)+'</h4>'+comparisonHtml(x.oldCost,x.newCost,x.oldPrice,x.suggested,x.margin,true)+'</article>').join('')+'</div>'+(r.length>5?'<p class="nf-info">Mais '+(r.length-5)+' produtos na central de reajustes.</p>':''),'<button class="btn-dark-soft" id="nfStockAlerts">Alertas de estoque</button><button class="btn-dark-soft" id="nfLater">Decidir depois</button><button class="btn-gold" id="nfReviewNow">Ver todos e decidir</button>');
  $('nfStockAlerts').onclick=()=>{closeModal();oldAlerts()};$('nfLater').onclick=closeModal;$('nfReviewNow').onclick=()=>{closeModal();navigate('nf-reviews')};
 }
 function showReviews(){
@@ -232,11 +259,18 @@ function showReviews(){
  const all=get(K.r),r=all.filter(x=>x.status==='pending'),up=r.filter(x=>x.newCost>x.oldCost).length;
  let body='<div class="nf-kpis"><div><small>Pendentes</small><strong>'+r.length+'</strong></div><div><small>Aumentos</small><strong class="nf-up">'+up+'</strong></div><div><small>Reduções</small><strong class="nf-down">'+(r.length-up)+'</strong></div></div>';
  body+='<div class="nf-info">O custo médio e a entrada já foram registrados. A sugestão de venda usa o último custo de aquisição e a margem-alvo anterior.</div>';
- if(r.length)body+='<div class="nf-toolbar">'+btn('nfSelectAll','Selecionar todos')+btn('nfApply','Aplicar selecionados',true)+btn('nfKeep','Manter selecionados')+'</div>'+table(['Selecionar','Produto','Custo anterior → novo','Venda atual','Venda sugerida','Margem alvo / sem reajuste'],r.map(x=>row(['<input type="checkbox" data-nf-review="'+h(x.id)+'" aria-label="Selecionar '+h(x.name)+'">',h(x.name),amount(x.oldCost)+' → <strong class="'+(x.newCost>x.oldCost?'nf-up':'nf-down')+'">'+amount(x.newCost)+'</strong>',amount(x.oldPrice),x.suggested===null?'<input type="number" min="0.01" step=".01" class="form-control-dark" data-nf-manual="'+h(x.id)+'" placeholder="Novo preço">':amount(x.suggested),percent(x.margin)+' / '+percent(x.oldPrice>0?1-x.newCost/x.oldPrice:NaN)])).join(''));
+ if(r.length)body+='<div class="nf-filterbar"><input class="form-control-dark" id="nfReviewSearch" placeholder="Buscar produto"><select class="form-select-dark" id="nfReviewFilter"><option value="all">Todos os reajustes</option><option value="up">Aumentos de custo</option><option value="down">Reduções de custo</option></select></div><div class="nf-toolbar">'+btn('nfSelectAll','Selecionar visíveis')+btn('nfUnselect','Limpar seleção')+btn('nfApply','Aplicar selecionados',true)+btn('nfKeep','Manter selecionados')+'<span id="nfReviewSelected">0 selecionados</span></div><div class="nf-review-list">'+r.map(x=>'<article class="nf-review-card" data-nf-review-card="'+h(x.id)+'"><label class="nf-review-title"><input type="checkbox" data-nf-review="'+h(x.id)+'"><strong>'+h(x.name)+'</strong></label><div data-nf-review-compare="'+h(x.id)+'">'+comparisonHtml(x.oldCost,x.newCost,x.oldPrice,x.suggested,x.margin)+'</div>'+(x.suggested===null?'<label class="nf-manual-price">Definir novo preço<input type="number" min="0.01" step=".01" class="form-control-dark" data-nf-manual="'+h(x.id)+'" placeholder="Novo preço"></label>':'')+'</article>').join('')+'</div>';
+
  else body+='<div class="empty-state"><strong>Nenhum reajuste pendente</strong></div>';
  appView.innerHTML=panel('Aprovação de preços',body);
  if(!r.length)return;
- $('nfSelectAll').onclick=()=>{appView.querySelectorAll('[data-nf-review]').forEach(e=>e.checked=true)};
+ function selectionCount(){$('nfReviewSelected').textContent=appView.querySelectorAll('[data-nf-review]:checked').length+' selecionados'}
+ function filterReviews(){const q=N.norm($('nfReviewSearch').value),f=$('nfReviewFilter').value;appView.querySelectorAll('[data-nf-review-card]').forEach(card=>{const x=r.find(v=>v.id===card.dataset.nfReviewCard);card.hidden=!N.norm(x.name).includes(q)||(f==='up'&&x.newCost<=x.oldCost)||(f==='down'&&x.newCost>=x.oldCost)});selectionCount()}
+ $('nfReviewSearch').oninput=filterReviews;$('nfReviewFilter').onchange=filterReviews;
+ $('nfSelectAll').onclick=()=>{appView.querySelectorAll('[data-nf-review-card]:not([hidden]) [data-nf-review]').forEach(e=>e.checked=true);selectionCount()};
+ $('nfUnselect').onclick=()=>{appView.querySelectorAll('[data-nf-review]').forEach(e=>e.checked=false);selectionCount()};
+ appView.querySelectorAll('[data-nf-review]').forEach(e=>e.onchange=selectionCount);
+ appView.querySelectorAll('[data-nf-manual]').forEach(e=>e.oninput=()=>{const x=r.find(v=>v.id===e.dataset.nfManual),p=e.value!==''&&Number.isFinite(Number(e.value))&&Number(e.value)>0?Number(e.value):null;const target=appView.querySelector('[data-nf-review-compare="'+x.id+'"]');target.innerHTML=comparisonHtml(x.oldCost,x.newCost,x.oldPrice,p,x.margin)});
  const expected=D.rawSnapshot([K.p,K.r,K.h]);
  function decide(apply){
   try{
