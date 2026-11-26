@@ -17,6 +17,7 @@ const cfopOK=/^[56](?:101|102|103|104|105|106|401|403|405|501|502|551|552|653|65
 function pdf(pages){
 if(!Array.isArray(pages)||!pages.length||pages.length>50)fail('Limite de páginas excedido.');
 let all=pages.map(group);let text=all.flat().map(r=>r.text).join('\n');const key=findKey(text);let first=all[0];
+const firstText=norm(first.map(r=>r.text).join(' '));const printed=firstText.match(/(?:PAGINA|FOLHA|FL\.?)\s*(\d{1,2})\s*(?:DE|\/)\s*(\d{1,2})/)||firstText.match(/SERIE\s+\d+\s+(\d{1,2})\s*\/\s*(\d{1,2})/);if(printed&&(Number(printed[1])!==1||Number(printed[2])!==pages.length))fail('Quantidade de páginas diferente da indicação da nota.');
 let prodTotal=headerValue(first,/^VALOR TOTAL (?:DOS )?PRODUTOS$/), nfTotal=headerValue(first,/^(?:VALOR TOTAL DA (?:NOTA|NF(?:-E)?)|VLR TOTAL DA NOTA)$/);
 if(prodTotal===null||nfTotal===null)fail('Não consegui localizar os totais impressos. Use o XML desta nota.');
 const supplierCandidates=first.flatMap(r=>r.items).map(i=>i.text).filter(s=>/\b(?:LTDA|S\.?A\.?|EIRELI)\b/i.test(s)&&!/(RECEBEMOS|TRANSPORT|RECEBIDO|REDESPACHO)/i.test(s)&&s.length<150);
@@ -55,7 +56,7 @@ for(let page=0;page<all.length;page++){
     const rr=rows[k];if(rr.items.every(i=>Math.abs(i.x-v.descX)<4&&i.x<v.ncmX-3)&&rr.y-rows[k-1].y<14){v.name+=' '+rr.text}else break;
    }
    if(a===0&&page>0&&lines.length){
-    const prior=lines[lines.length-1];for(let k=v.j-1;k>=0&&k>=v.j-4;k--){const rr=rows[k];if(rr.items.every(i=>Math.abs(i.x-v.descX)<4&&i.x<v.ncmX-3)&&rows[k+1].y-rr.y<14){prior.name=prior.name+' '+rr.text}else break}
+    const prior=lines[lines.length-1],continuation=[];for(let k=v.j-1;k>=0&&k>=v.j-4;k--){const rr=rows[k];if(rr.items.every(i=>Math.abs(i.x-v.descX)<4&&i.x<v.ncmX-3)&&rows[k+1].y-rr.y<14){continuation.unshift(rr.text)}else break}if(continuation.length)prior.name+=' '+continuation.join(' ')
    }
   }
   if(!v.name||v.name.length>500)fail('Descrição incompleta: '+v.code);
