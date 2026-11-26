@@ -98,6 +98,7 @@
   }
 
   function confirmDeleteV8(p){
+    if(p?.nfCodes?.length){toast('Produto vinculado a nota fiscal','Mantenha o cadastro para preservar a rastreabilidade.','danger');return;}
     openModal('Excluir produto',`
       <div class="delete-warning">
         <span><i class="bi bi-exclamation-triangle-fill"></i></span>
@@ -280,7 +281,7 @@
       selected.forEach((i,k)=>{
         const p=products.find(x=>x.id===i.productId);
         const finalLoc=isOut?(p.location||''):String(i.location).trim();
-        batch.items.push({productId:p.id,product:p.name,qty:Number(i.qty),unit:Number(i.unit),location:finalLoc});
+        batch.items.push({productId:p.id,product:p.name,qty:Number(i.qty),unit:Number(i.unit),unitCostSnapshot:isOut&&!asPending?Number(p.cost):null,location:finalLoc});
 
         if(!asPending){
           p.stock+=isOut?-Number(i.qty):Number(i.qty);
