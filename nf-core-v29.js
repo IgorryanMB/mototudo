@@ -21,6 +21,7 @@ let prodTotal=headerValue(first,/^VALOR TOTAL (?:DOS )?PRODUTOS$/), nfTotal=head
 if(prodTotal===null||nfTotal===null)fail('Não consegui localizar os totais impressos. Use o XML desta nota.');
 const supplierCandidates=first.flatMap(r=>r.items).map(i=>i.text).filter(s=>/\b(?:LTDA|S\.?A\.?|EIRELI)\b/i.test(s)&&!/(RECEBEMOS|TRANSPORT|RECEBIDO|REDESPACHO)/i.test(s)&&s.length<150);
 let supplier=supplierCandidates[0]||'';
+if(/^MOTOPECAS LTDA$/i.test(norm(supplier))){const previous=first.findIndex(r=>r.items.some(i=>i.text===supplier));const above=first[previous-1]?.items.find(i=>/AFTERMARKET/i.test(i.text));if(above)supplier=above.text+' '+supplier;}
 const recipientSection=norm(first.map(r=>r.text).join('\n')).split(/DESTINATARIO\s*\/?\s*REMETENTE/)[1]||'';
 const cnpjs=[...(recipientSection.slice(0,900).match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g)||[])].map(digits).filter(x=>x!==key.slice(6,20));
 const recipient=cnpjs[0]||'';
@@ -35,7 +36,7 @@ for(let page=0;page<all.length;page++){
   const r=rows[j], m=r.text.match(rowRe);if(!m)continue;
   const tail=m[8].trim().split(/\s+/).filter(t=>/^\d[\d.,]*$/.test(t));if(tail.length<5)continue;
   const unit=m[5].toUpperCase();if(!/^(PC|UN|PR|CX|PÇ|PAR|KIT|PCT|JG|L|KG|MT|M|CJ)$/.test(unit))fail('Unidade não reconhecida: '+unit);
-  const qty=br(m[6]),unitCost=br(m[7]),total=br(tail[west?1:0]),ipi=br(tail[tail.length-3]),discount=west?br(tail[0]):hasDiscount?br(tail[1]):0;
+  const qty=br(m[6]),unitCost=br(m[7]),total=br(tail[west?1:0]),ipi=br(tail[tail.length-3]),discount=west?br(tail[0]):(hasDiscount||tail.length===7)?br(tail[1]):0;
   if(!(qty>0&&unitCost>=0&&total>=0&&ipi>=0&&discount>=0))fail('Item inválido.');
   if(Math.abs(qty*unitCost-total)>Math.max(.02,qty*.005+.011))fail('Quantidade × valor unitário diverge no item '+m[1]);
   const ncmIndex=r.items.findIndex(i=>i.text.includes(m[3]));const descX=r.items[1]?.x??0;const ncmX=ncmIndex>=0?r.items[ncmIndex].x:0;
@@ -71,6 +72,7 @@ const one=(n,t)=>els(n,t)[0];const val=(n,t,required=true)=>{const v=one(n,t)?.t
 const infs=els(d,'infNFe');if(infs.length!==1)fail('Envie uma NF-e por arquivo XML.');
 const inf=infs[0],key=inf.getAttribute('Id')?.replace(/^NFe/,'')||'',ide=one(inf,'ide'),emit=one(inf,'emit'),dest=one(inf,'dest'),tot=one(inf,'ICMSTot');
 if(!ide||!emit||!dest||!tot||val(ide,'tpNF')!=='1'||val(ide,'finNFe')!=='1')fail('XML não representa venda normal do fornecedor.');
+if(digits(val(emit,'CNPJ'))!==key.slice(6,20))fail('Emitente não corresponde à chave da NF-e.');
 const prot=one(d,'infProt');const authorized=!!prot&&['100','150'].includes(val(prot,'cStat'))&&val(prot,'chNFe')===key;
 if(prot&&!authorized)fail('Protocolo de autorização incompatível.');
 const lines=els(inf,'det').map(det=>{const p=one(det,'prod');return {code:val(p,'cProd'),name:val(p,'xProd'),ncm:val(p,'NCM'),cfop:val(p,'CFOP'),unit:val(p,'uCom').toUpperCase(),qty:num(val(p,'qCom')),unitCost:num(val(p,'vUnCom')),total:num(val(p,'vProd')),ipi:num(val(det,'vIPI',false)||'0'),discount:num(val(p,'vDesc',false)||'0'),ean:val(p,'cEAN',false),page:1}});
