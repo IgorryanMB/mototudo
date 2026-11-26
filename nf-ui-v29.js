@@ -81,7 +81,7 @@ function showImport(){
  body+='<div class="nf-key">'+h(n.key)+' • '+h(n.date||'Data não identificada')+' • '+h(n.source)+'</div>';
  body+='<div class="nf-fields"><label>Fornecedor<select id="nfSupplier" class="form-select-dark">'+supopts+'</select></label><label>Nome do fornecedor (novo)<input class="form-control-dark" id="nfSupplierName" value="'+h(d.supplierName)+'" maxlength="150"></label><label>CNPJ da loja (destinatário)<input class="form-control-dark" id="nfRecipient" value="'+h(d.recipient)+'" placeholder="14 dígitos"></label><label>Frete adicional pago (R$)<input class="form-control-dark" id="nfExtra" type="number" min="0" step=".01" value="'+d.extra+'"></label><label>Margem bruta inicial de novos produtos (%)<input class="form-control-dark" id="nfMargin" type="number" min="0" max="99" step=".1" value="'+h(d.margin)+'" placeholder="Informe uma margem"></label></div>';
  if(n.externalFreightHint)body+='<div class="nf-warn">A nota menciona frete por conta do destinatário. Informe somente o valor efetivamente pago, se não estiver incluído no total.</div>';
- body+='<div class="nf-info">Destinatário lido: '+h(n.recipient||'não identificado')+'. Custo de aquisição calculado pelo total da nota, com ajustes rateados; confira tributos recuperáveis com o contador. Pares e kits são mantidos como unidade de venda; caixas precisam de conversão confirmada.</div>';
+ body+='<div class="nf-info">Destinatário lido: '+h(n.recipient||'não identificado')+'. Custo bruto de aquisição calculado pelo total da nota, com ajustes rateados; confira tributos recuperáveis com o contador. Pares e kits são mantidos como unidade de venda; caixas precisam de conversão confirmada.</div>';
  body+='<datalist id="nfProducts">'+productOpts+'</datalist><div class="nf-toolbar">'+btn('nfAllNew','Marcar não vinculados como novos')+btn('nfClear','Desmarcar novos')+'<span id="nfSummary"></span></div>';
  let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
  body+=table(['Produto da nota','Unidade / qtd.','Conversão','Vincular / cadastrar','Categoria (novo)','Custo unit.'],d.rows.map((r,i)=>{
@@ -225,7 +225,7 @@ function showNotes(){
  appView.innerHTML=panel('Notas fiscais',notes.length?table(['Nota / fornecedor','Entrada','Itens','Total','Situação','Detalhes'],notes.map(n=>row(['<strong>'+h(n.key.slice(25,34))+'</strong><small>'+h(n.supplier)+'</small>',h(date(n.receivedAt)),n.lines.length,amount(n.total),n.status==='reversed'?'Estornada':'Importada','<button class="btn-dark-soft" data-nf-note="'+h(n.id)+'">Ver nota</button>'])).join('')):'<div class="empty-state"><strong>Nenhuma nota importada</strong></div>','<div class="nf-toolbar">'+btn('nfBackup','Exportar backup')+btn('nfGo','Nova importação',true)+'</div>');
  $('nfBackup').onclick=backup;
  $('nfGo').onclick=()=>navigate('nf-import');
- appView.querySelectorAll('[data-nf-note]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.nfNote);if(!n)return;openModal('Nota '+n.key.slice(25,34),'<div class="nf-key">'+h(n.key)+'</div><p>'+h(n.supplier)+' • '+amount(n.total)+' • Frete extra '+amount(n.extra)+'</p>'+table(['Código','Produto','Quantidade fiscal','Entrada','Custo'],n.lines.map(i=>row([h(i.code),h(i.name),i.qtyFiscal+' '+h(i.unit),i.qty,amount(i.cost)])).join('')),(n.status==='imported'&&n.lines.every(i=>i.after)?btn('nfReverse','Estornar entrada'):'')+btn('nfCloseNote','Fechar'));$('nfCloseNote').onclick=closeModal;if($('nfReverse'))$('nfReverse').onclick=()=>{closeModal();askReverse(n)}});
+ appView.querySelectorAll('[data-nf-note]').forEach(b=>b.onclick=()=>{const n=notes.find(x=>x.id===b.dataset.nfNote);if(!n)return;openModal('Nota '+n.key.slice(25,34),'<div class="nf-key">'+h(n.key)+'</div><p>'+h(n.supplier)+' • '+amount(n.total)+' • Frete extra '+amount(n.extra)+'</p>'+table(['Código','Produto','Quantidade fiscal','Entrada','Custo unitário'],n.lines.map(i=>row([h(i.code),h(i.name),i.qtyFiscal+' '+h(i.unit),i.qty,amount(i.cost)])).join('')),(n.status==='imported'&&n.lines.every(i=>i.after)?btn('nfReverse','Estornar entrada'):'')+btn('nfCloseNote','Fechar'));$('nfCloseNote').onclick=closeModal;if($('nfReverse'))$('nfReverse').onclick=()=>{closeModal();askReverse(n)}});
 }
 
 function backup(){
@@ -274,7 +274,7 @@ window.MotoTudoNFPriceEdit=function(before,item){
   const base=Number(item.lastPurchaseCost??item.cost);
   if(base>0&&item.price>=base)item.targetMargin=1-base/item.price;else delete item.targetMargin;
  }
- if(!item.lastPurchaseCost&&Number(before.cost)!==Number(item.cost))item.lastPurchaseCost=item.cost;
+ if(item.lastPurchaseCost==null&&Number(before.cost)!==Number(item.cost))item.lastPurchaseCost=item.cost;
  hist.unshift({id:id(),productId:item.id,name:item.name,date:now,source:'Edição manual',kind:'manual',oldCost:before.cost,newCost:item.cost,oldPrice:before.price,newPrice:item.price});
  for(const r of rev)if(r.productId===item.id&&r.status==='pending'){r.status='superseded';r.decidedAt=now}
  ps[i]=copy(item);D.atomicWrite({[K.p]:ps,[K.o]:os,[K.h]:hist,[K.r]:rev},expected);products=ps;orders=os;
