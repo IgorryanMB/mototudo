@@ -14,6 +14,21 @@ const moneyRe=/^\d[\d.]*,\d{2}$/;
 function headerValue(rows,pattern){for(let k=0;k<rows.length;k++){const r=rows[k];for(const i of r.items){if(!pattern.test(norm(i.text)))continue;const candidates=rows.slice(k+1,k+6).filter(a=>a.y-r.y>3&&a.y-r.y<19).flatMap(a=>a.items.filter(v=>v.x>=i.x-3&&v.x<i.x+155&&moneyRe.test(v.text)));if(candidates.length){candidates.sort((a,b)=>b.x-a.x);return br(candidates[0].text)}}}return null}
 const rowRe=/^([A-Za-z0-9][A-Za-z0-9./_-]{0,49})\s+(.*?)\s*((?:\d{8}|\d{4}\.\d{2}\.\d{2}))\s+(?:\d{1,4}(?:\s*\/\s*\d{1,3})?)\s+(\d{4})\s+([A-Z]{1,6})\s+(\d[\d.,]*)\s+(\d[\d.,]*)\s+(.+)$/i;
 const cfopOK=/^[56](?:101|102|103|104|105|106|401|403|405|501|502|551|552|653|654|655|656|657)$/;
+function invoiceDate(rows,key){
+ const ym='20'+key.slice(2,4)+'-'+key.slice(4,6);
+ const parse=t=>Array.from(String(t).matchAll(/\b(\d{2})[/.](\d{2})[/.](20\d{2})\b/g)).map(m=>m[3]+'-'+m[2]+'-'+m[1]).filter(v=>{const d=new Date(v+'T12:00:00Z');return v.startsWith(ym+'-')&&Number.isFinite(+d)&&d.toISOString().slice(0,10)===v});
+ const found=[];
+ for(let j=0;j<rows.length;j++)for(const i of rows[j].items){
+  if(!/DATA\s+(?:DA\s+)?EMISS[AÃ]O/i.test(i.text))continue;
+  found.push(...parse(i.text));
+  for(const rr of rows.slice(j+1,j+5))if(rr.y-rows[j].y<21)for(const it of rr.items)if(it.x>=i.x-10&&it.x<i.x+100)found.push(...parse(it.text));
+ }
+ const preferred=[...new Set(found)];
+ if(preferred.length===1)return preferred[0];
+ const section=norm(rows.map(r=>r.text).join('\n')).split(/DESTINATARIO\s*\/?\s*REMETENTE/)[1]||'';
+ const fallback=[...new Set(parse(section.split(/CALCULO DO IMPOSTO|FATURA|DUPLICATAS|TRANSPORTADOR/)[0].slice(0,1800)))];
+ return fallback.length===1?fallback[0]:'';
+}
 function pdf(pages){
 if(!Array.isArray(pages)||!pages.length||pages.length>50)fail('Limite de páginas excedido.');
 let all=pages.map(group);let text=all.flat().map(r=>r.text).join('\n');const key=findKey(text);let first=all[0];
@@ -26,8 +41,7 @@ if(/^MOTOPECAS LTDA$/i.test(norm(supplier))){const previous=first.findIndex(r=>r
 const recipientSection=norm(first.map(r=>r.text).join('\n')).split(/DESTINATARIO\s*\/?\s*REMETENTE/)[1]||'';
 const cnpjs=[...(recipientSection.slice(0,900).match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g)||[])].map(digits).filter(x=>x!==key.slice(6,20));
 const recipient=cnpjs[0]||'';
-let dateMatch=text.match(/\b(\d{2})[/.](\d{2})[/.](20\d{2})\b/);
-const date=dateMatch?dateMatch[3]+'-'+dateMatch[2]+'-'+dateMatch[1]:'';
+const date=invoiceDate(first,key);
 const lines=[];
 for(let page=0;page<all.length;page++){
  const rows=all[page];const head=norm(rows.map(r=>r.text).join(' '));const west=/V TRIB/.test(head)&&/\bDESC\b/.test(head);
@@ -92,5 +106,5 @@ return n;
 function multiplier(i){if(i.unit==='CX'||i.unit==='PCT'){const m=i.name.match(/\b(\d{1,4})\s*[X×]\s*\d+(?:[.,]\d+)?\s*(?:ML|L|G|KG|UN)\b/i);return m?Number(m[1]):null}return 1}
 function costs(n,extra=0){if(!Number.isFinite(extra)||extra<0)fail('Frete adicional inválido.');const base=n.lines.map(i=>cents(i.total)-cents(i.discount)+cents(i.ipi));const sum=base.reduce((a,b)=>a+b,0), target=cents(n.nfTotal)+cents(extra);if(sum<=0)fail('Custo inválido.');let allocated=0;return base.map((v,i)=>{let a=i===base.length-1?target-allocated:Math.round(target*v/sum);allocated+=a;if(a<0)fail('Custo negativo.');return a/100})}
 function suggested(cost,margin){return Number.isFinite(cost)&&cost>0&&Number.isFinite(margin)&&margin>=0&&margin<1?Math.ceil((cost/(1-margin)-1e-9)*100)/100:null}
-g.MotoTudoNF=Object.freeze({pdf,xml,validate,validKey,findKey,group,br,norm,digits,round,cents,multiplier,costs,suggested});
+g.MotoTudoNF=Object.freeze({pdf,xml,validate,validKey,findKey,group,invoiceDate,br,norm,digits,round,cents,multiplier,costs,suggested});
 })(typeof window==='undefined'?globalThis:window);
