@@ -3,6 +3,7 @@
 const N=MotoTudoNF,D=MotoTudoData, K={p:'mt_products',m:'mt_movements',s:'mt_suppliers',o:'mt_orders',cfg:'mt_settings',n:'mt_invoices',h:'mt_price_history',r:'mt_price_reviews'};
 const keys=Object.values(K);
 const copy=x=>JSON.parse(JSON.stringify(x));
+function resolveProduct(ps,ref){const t=String(ref??'').trim();if(!t||t==='NOVO')return null;const exact=ps.filter(p=>String(p.id)===t);if(exact.length===1)return exact[0];const hits=ps.filter(p=>String(p.code)===t||N.norm(p.name)===N.norm(t));return hits.length===1?hits[0]:null}
 const get=k=>D.read(k,[]);
 const $=id=>document.getElementById(id);
 const h=esc;
@@ -56,7 +57,7 @@ async function nextFile(){
   const candidates=products;
   const rows=n.lines.map(i=>{
    const matches=candidates.filter(p=>Array.isArray(p.nfCodes)&&p.nfCodes.some(c=>c.cnpj===cnpj&&String(c.code)===i.code)||sup&&Number(p.supplierId)===Number(sup.id)&&String(p.code)===i.code);
-   return {item:i,target:matches.length===1?String(matches[0].id):'',factor:N.multiplier(i),category:categoryFor(i.name),name:i.name};
+   return {item:i,target:matches.length===1?String(matches[0].id):'',factor:matches.length===1?(matches[0].nfCodes?.find(c=>c.cnpj===cnpj&&String(c.code)===i.code)?.factor??N.multiplier(i)):N.multiplier(i),category:categoryFor(i.name),name:i.name};
   });
   draft={n,cnpj,supplierId:sup?String(sup.id):'new',supplierName:sup?.name||n.supplier,recipient:settings.nfRecipient||'',extra:0,margin:'',verified:false,rows,expected:D.rawSnapshot(keys)};
  }catch(e){error=e.message}
@@ -82,24 +83,24 @@ function showImport(){
  if(n.externalFreightHint)body+='<div class="nf-warn">A nota menciona frete por conta do destinatário. Informe somente o valor efetivamente pago, se não estiver incluído no total.</div>';
  body+='<div class="nf-info">Destinatário lido: '+h(n.recipient||'não identificado')+'. Custo de aquisição calculado pelo total da nota, com ajustes rateados; confira tributos recuperáveis com o contador. Pares e kits são mantidos como unidade de venda; caixas precisam de conversão confirmada.</div>';
  body+='<datalist id="nfProducts">'+productOpts+'</datalist><div class="nf-toolbar">'+btn('nfAllNew','Marcar não vinculados como novos')+btn('nfClear','Desmarcar novos')+'<span id="nfSummary"></span></div>';
- const costs=N.costs(n,Number(d.extra)||0);
+ let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
  body+=table(['Produto da nota','Unidade / qtd.','Conversão','Vincular / cadastrar','Categoria (novo)','Custo unit.'],d.rows.map((r,i)=>{
-  const p=products.find(p=>String(p.id)===r.target);
+  const p=resolveProduct(products,r.target);
   const fact=r.factor??'';
   return row(['<strong>'+h(r.item.code)+'</strong><input class="form-control-dark nf-name" data-i="'+i+'" data-f="name" value="'+h(r.name)+'"><small>'+h(r.item.cfop)+' • '+h(r.item.ncm)+' • Pág. '+r.item.page+'</small>',
   h(r.item.unit)+' × '+r.item.qty,'<input class="form-control-dark nf-factor" data-i="'+i+'" data-f="factor" type="number" min="1" max="10000" step="1" value="'+fact+'"><small data-nf-qty="'+i+'">'+(fact?r.item.qty*fact:'Conferir')+' no estoque</small>',
-  '<input class="form-control-dark nf-target" data-i="'+i+'" data-f="target" list="nfProducts" value="'+h(r.target)+'" placeholder="ID do produto ou NOVO"><small data-nf-match="'+i+'">'+h(p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo')+'</small>',
+  '<input class="form-control-dark nf-target" data-i="'+i+'" data-f="target" list="nfProducts" value="'+h(r.target)+'" placeholder="Código, nome ou NOVO"><small data-nf-match="'+i+'">'+h(p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo')+'</small>',
   '<select class="form-select-dark nf-category" data-i="'+i+'" data-f="category">'+categoriesOpts(r.category)+'</select>',
   '<strong data-nf-cost="'+i+'">'+(fact?amount(costs[i]/(r.item.qty*fact)):'—')+'</strong>']);
  }).join(''));
  body+='<label class="nf-check"><input type="checkbox" id="nfVerified" '+(d.verified?'checked':'')+'> Conferi destinatário, autorização da NF-e, recebimento físico, unidades, impostos, produtos e custos. Confirmo que esta mercadoria ainda não foi lançada no estoque.</label>';
  body+='<div class="nf-toolbar">'+btn('nfCancel','Descartar prévia')+btn('nfConfirm','Confirmar entrada',true)+(queue.length?'<small>'+queue.length+' arquivo(s) aguardando</small>':'')+'</div>';
  appView.innerHTML=panel('Conferência de entrada',body);
- $('nfSupplier').value=d.supplierId;$('nfSupplier').onchange=e=>{d.supplierId=e.target.value;d.verified=false;showImport()};
- $('nfSupplierName').oninput=e=>d.supplierName=e.target.value;
- $('nfRecipient').oninput=e=>d.recipient=e.target.value;
- $('nfMargin').oninput=e=>d.margin=e.target.value;
- $('nfExtra').oninput=e=>{d.extra=e.target.value;refresh()};
+ $('nfSupplier').value=d.supplierId;$('nfSupplier').onchange=e=>{d.supplierId=e.target.value;const s=suppliers.find(x=>String(x.id)===d.supplierId);if(s){d.supplierName=s.name;d.rows.forEach(r=>{if(!r.target){const matches=products.filter(p=>Number(p.supplierId)===Number(s.id)&&String(p.code)===r.item.code);if(matches.length===1)r.target=String(matches[0].id)}})}d.verified=false;showImport()};
+ $('nfSupplierName').oninput=e=>{d.supplierName=e.target.value;d.verified=false;$('nfVerified').checked=false};
+ $('nfRecipient').oninput=e=>{d.recipient=e.target.value;d.verified=false;$('nfVerified').checked=false};
+ $('nfMargin').oninput=e=>{d.margin=e.target.value;d.verified=false;$('nfVerified').checked=false};
+ $('nfExtra').oninput=e=>{d.extra=e.target.value;d.verified=false;$('nfVerified').checked=false;refresh()};
  $('nfVerified').onchange=e=>d.verified=e.target.checked;
  appView.querySelectorAll('[data-f]').forEach(el=>el.oninput=e=>{const t=e.target;d.rows[Number(t.dataset.i)][t.dataset.f]=t.value;d.verified=false;$('nfVerified').checked=false;refresh()});
  $('nfAllNew').onclick=()=>{d.rows.forEach(r=>{if(!r.target)r.target='NOVO'});d.verified=false;showImport()};
@@ -110,7 +111,7 @@ function showImport(){
  function refresh(){
   let costs;try{costs=N.costs(n,Number(d.extra)||0)}catch{costs=n.lines.map(()=>0)}
   let unresolved=0;d.rows.forEach((r,i)=>{
-   const p=products.find(p=>String(p.id)===r.target),fact=Number(r.factor),qty=r.item.qty*fact;
+   const p=resolveProduct(products,r.target),fact=Number(r.factor),qty=r.item.qty*fact;
    const qtyEl=appView.querySelector('[data-nf-qty="'+i+'"]'),match=appView.querySelector('[data-nf-match="'+i+'"]'),cost=appView.querySelector('[data-nf-cost="'+i+'"]');
    qtyEl.textContent=fact>0?qty+' no estoque':'Conferir';match.textContent=p?p.name:r.target==='NOVO'?'Novo cadastro':'Sem vínculo válido';cost.textContent=fact>0?amount(costs[i]/qty):'—';
    if((!p&&r.target!=='NOVO')||!(fact>=1&&Number.isInteger(fact)))unresolved++;
@@ -142,18 +143,18 @@ function confirmEntry(){
   if(!r.name.trim())throw Error('Nome ausente: '+i.code);
   if(newCodes.has(i.code))throw Error('Código repetido na nota: '+i.code+'. Revise no XML antes de importar.');newCodes.add(i.code);
   const purchase=N.round(costs[k]/qty);if(purchase<=0)throw Error('Custo unitário zerado: '+i.code);
-  let p=ps.find(p=>String(p.id)===r.target),isNew=r.target==='NOVO',before;
+  let p=resolveProduct(ps,r.target),isNew=r.target==='NOVO',before;
   if(isNew){
    if(ps.some(p=>p.nfCodes?.some(x=>x.cnpj===d.cnpj&&x.code===i.code)||Number(p.supplierId)===Number(supplier.id)&&String(p.code)===i.code))throw Error('Produto já cadastrado com esse código: '+i.code);
    const margin=Number(d.margin)/100;if(d.margin===''||!Number.isFinite(margin)||margin<0||margin>=1)throw Error('Informe a margem inicial dos novos produtos.');
    const internalCode=d.cnpj+'-'+i.code;
    if(ps.some(x=>x.code===internalCode))throw Error('Código interno já existente: '+internalCode);
-   p={id:nextId++,name:r.name.trim(),code:internalCode,brand:'',application:'',location:'',category:r.category,supplierId:supplier.id,stock:0,min:0,cost:purchase,price:N.suggested(purchase,margin),active:true,targetMargin:margin,nfCodes:[],stockUnit:i.unit==='CX'&&factor>1?'UN':i.unit};ps.push(p);before=null;
+   p={id:nextId++,name:r.name.trim(),code:internalCode,brand:'',application:'',location:'',category:r.category,supplierId:supplier.id,stock:0,min:0,cost:purchase,price:N.suggested(purchase,margin),active:true,targetMargin:margin,nfCodes:[],stockUnit:factor>1?'UN':i.unit};ps.push(p);before=null;
   }else{
    if(!p)throw Error('Vincule ou cadastre: '+i.code);
    before=copy(p);
    if(p.nfCodes?.some(x=>x.cnpj===d.cnpj&&x.code!==i.code))throw Error('Produto já associado a outro código do fornecedor: '+p.name);
-   if(p.stockUnit&&p.stockUnit!==(i.unit==='CX'&&factor>1?'UN':i.unit)&&!( ['PC','UN'].includes(p.stockUnit)&&['PC','UN'].includes(i.unit)))throw Error('Unidade de estoque incompatível: '+p.name);
+   if(p.stockUnit&&p.stockUnit!==(factor>1?'UN':i.unit)&&!( ['PC','UN'].includes(p.stockUnit)&&['PC','UN'].includes(i.unit)))throw Error('Unidade de estoque incompatível: '+p.name);
   }
   if(seen.has(p.id))throw Error('Duas linhas vinculadas ao mesmo produto. Confira os códigos.');seen.add(p.id);
   const oldStock=Number(p.stock),oldCost=Number(p.cost),oldPurchase=Number(p.lastPurchaseCost??p.cost),oldPrice=Number(p.price);
@@ -161,7 +162,7 @@ function confirmEntry(){
   const margin=Number.isFinite(p.targetMargin)&&p.targetMargin>=0&&p.targetMargin<1?p.targetMargin:oldPrice>0&&oldPurchase>0&&oldPrice>=oldPurchase?1-oldPurchase/oldPrice:null;
   p.cost=N.round((oldStock*oldCost+costs[k])/(oldStock+qty));p.lastPurchaseCost=purchase;p.stock=oldStock+qty;
   if(margin!==null)p.targetMargin=margin;
-  if(!p.stockUnit)p.stockUnit=i.unit==='CX'&&factor>1?'UN':i.unit;
+  if(!p.stockUnit)p.stockUnit=factor>1?'UN':i.unit;
   p.nfCodes=Array.isArray(p.nfCodes)?p.nfCodes:[];
   if(!p.nfCodes.some(x=>x.cnpj===d.cnpj&&x.code===i.code))p.nfCodes.push({cnpj:d.cnpj,code:i.code,factor,unit:i.unit});
   else {const link=p.nfCodes.find(x=>x.cnpj===d.cnpj&&x.code===i.code);if(link.factor!==factor||link.unit!==i.unit)throw Error('Conversão diferente da última entrada: '+p.name);}
@@ -169,7 +170,7 @@ function confirmEntry(){
   for(const rev of reviews)if(rev.productId===p.id&&rev.status==='pending'){rev.status='superseded';rev.decidedAt=now}
   if(!isNew&&Math.abs(oldPurchase-purchase)>.00001){changes++;reviews.unshift({id:id(),batchId,productId:p.id,name:p.name,oldCost:oldPurchase,newCost:purchase,oldPrice,suggested,margin,status:'pending',date:now})}
   hist.unshift({id:id(),batchId,productId:p.id,name:p.name,date:now,source:'NF-e',oldCost:isNew?null:oldPurchase,newCost:purchase,oldPrice:isNew?null:oldPrice,newPrice:p.price,oldAverage:isNew?null:oldCost,newAverage:p.cost,kind:isNew?'created':'purchase'});
-  const movement={id:moveId++,type:'in',productId:p.id,product:p.name,qty,unit:purchase,location:p.location||'',date:now,note:'Entrada NF-e '+n.key.slice(25,34),orderId,orderCode:'NF-'+n.key.slice(25,34),invoiceId:batchId};
+  const movement={id:moveId++,type:'in',productId:p.id,product:p.name,qty,unit:purchase,location:p.location||'',date:now,note:'Entrada NF-e '+n.key.slice(25,34),orderId,orderCode:'NF-'+n.key.slice(6,20)+'-'+n.key.slice(25,34),invoiceId:batchId};
   ms.unshift(movement);items.push({productId:p.id,product:p.name,qty,unit:purchase,unitCostSnapshot:purchase,location:p.location||'',invoiceLineTotal:costs[k]});
   records.push({code:i.code,name:i.name,qtyFiscal:i.qty,unit:i.unit,factor,qty,productId:p.id,total:i.total,cost:purchase,allocated:costs[k],stockBefore:oldStock,stockAfter:p.stock});
  }
